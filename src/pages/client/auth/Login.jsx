@@ -1,21 +1,47 @@
 import React, { useState } from "react";
-import app from "../../firebase"; // Import your Firebase configuration
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import auth from "../../../firebase/auth"; // Import your Firebase auth instance
+import db from "../../../firebase/firestore"; // Import Firestore instance
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore"; // Import Firestore methods
+import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const handleLogin = async (event) => {
     event.preventDefault();
-    const auth = getAuth(app);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log("User logged in:", email);
-      // You can redirect the user or show a success message here
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+
+      // Fetch the user's role from Firestore
+      const userDoc = await getDoc(doc(db, "users", user.uid)); // Adjust the path as needed
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const { role } = userData;
+
+        // Check if the user role is 'patient'
+        if (role === "patient") {
+          console.log("User logged in:", email);
+          // Redirect to home
+          navigate("/home");
+        } else {
+          console.error("Unauthorized role:", role);
+          // Optionally show an error message to the user
+        }
+      } else {
+        console.error("No user data found!");
+      }
     } catch (error) {
       console.error("Error logging in:", error);
+      // Optionally show an error message to the user
     }
   };
 
