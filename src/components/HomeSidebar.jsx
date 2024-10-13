@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Home, Calendar, Info, User, LogOut, LogIn } from "lucide-react";
 import auth from "../firebase/auth"; // Import the auth object
 import { onAuthStateChanged, signOut } from "firebase/auth"; // Import necessary Firebase methods
+import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState(null); // State to hold user information
+  const navigate = useNavigate(); // Initialize useNavigate
 
   useEffect(() => {
     // Set up an authentication state observer
@@ -27,6 +29,10 @@ const Header = () => {
       console.error("Logout Error", error);
       alert("Error logging out.");
     }
+  };
+
+  const handleProfileClick = () => {
+    navigate("/profile"); // Navigate to the profile page
   };
 
   return (
@@ -61,7 +67,7 @@ const Header = () => {
           {user ? ( // Check if user is logged in
             <>
               <button
-                onClick={toggleMenu}
+                onClick={handleProfileClick} // Navigate to profile on click
                 className="flex items-center text-gray-700 hover:text-indigo-600"
               >
                 <User className="h-5 w-5 mr-1" />

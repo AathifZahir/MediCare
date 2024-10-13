@@ -11,6 +11,8 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import Home from "../pages/client/Home";
 import Appointment from "../pages/client/Appointment";
 import Hospital from "../pages/admin/Hospital";
+import Profile from "../pages/client/Profile";
+import ViewProfile from "../pages/admin/ViewProfile";
 
 const AppRoutes = () => {
   console.log("AppRoutes component rendered!");
@@ -21,9 +23,12 @@ const AppRoutes = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Home />} />
         <Route path="/appointments" element={<Appointment />} />
+        <Route path="/Profile" element={<Profile />} />
 
         <Route path="/admin/register" element={<AdminRegister />} />
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/ViewProfile" element={<ViewProfile />} />
+        
 
         <Route
           path="/admin/dashboard"
