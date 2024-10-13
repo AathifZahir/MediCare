@@ -5,7 +5,7 @@ import Login from "../pages/client/auth/Login";
 import AdminRegister from "../pages/admin/auth/Register";
 import AdminLogin from "../pages/admin/auth/Login";
 import Dashboard from "../pages/admin/Dashboard";
-import PaymentGateway from "../pages/client/Payment";
+import PaymentGateway from "../pages/client/PaymentGateway";
 import Transactions from "../pages/admin/Transactions";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Home from "../pages/client/Home";
@@ -50,7 +50,7 @@ const AppRoutes = () => {
           }
         />
 
-        <Route path="/paymentgateway" element={<PaymentGateway />} />
+        <Route path="/payment-gateway" element={<PaymentGateway />} />
       </Routes>
     </Router>
   );

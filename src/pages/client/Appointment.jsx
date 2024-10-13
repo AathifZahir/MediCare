@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import HomeSidebar from "../../components/HomeSidebar";
 import db from "../../firebase/firestore"; // Import Firestore instance
-import { collection, getDocs, addDoc } from "firebase/firestore"; // Firestore functions
+import { collection, getDocs, query, where } from "firebase/firestore"; // Firestore functions
 import Snackbar from "@mui/material/Snackbar"; // Import Material-UI Snackbar
 import Alert from "@mui/material/Alert";
+import { useNavigate } from "react-router-dom";
 
 const appointmentTypes = ["Checkup", "Consultation", "Surgery"];
 
@@ -14,11 +15,13 @@ const timeSlots = Array.from({ length: 13 }, (_, i) => {
 });
 
 const Appointment = () => {
+  const navigate = useNavigate();
   const [hospitals, setHospitals] = useState([]);
   const [selectedHospital, setSelectedHospital] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedType, setSelectedType] = useState("");
+  const [bookedTimes, setBookedTimes] = useState([]); // Track booked times
   const [snackbarOpen, setSnackbarOpen] = useState(false); // For Snackbar
 
   // Fetch hospitals from Firestore
@@ -35,8 +38,34 @@ const Appointment = () => {
     fetchHospitals();
   }, []);
 
+  // Fetch appointments for selected hospital and date
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      if (selectedHospital && selectedDate) {
+        const q = query(
+          collection(db, "appointments"),
+          where("hospitalId", "==", selectedHospital),
+          where("date", "==", selectedDate)
+        );
+        const querySnapshot = await getDocs(q);
+        const appointments = querySnapshot.docs.map((doc) => doc.data().time);
+
+        // Log the appointments fetched for the selected date
+        console.log(
+          `Appointments for hospital ${selectedHospital} on ${selectedDate}:`,
+          appointments
+        );
+
+        setBookedTimes(appointments);
+      }
+    };
+
+    fetchAppointments();
+  }, [selectedHospital, selectedDate]);
+
   const handleHospitalChange = (event) => {
     setSelectedHospital(event.target.value);
+    setBookedTimes([]); // Reset booked times when hospital changes
   };
 
   const handleDateChange = (event) => {
@@ -58,19 +87,25 @@ const Appointment = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    // Prepare appointment data
     const appointmentData = {
-      hospital: selectedHospital,
+      hospitalId: selectedHospital,
       type: selectedType,
       date: selectedDate,
       time: selectedTime,
     };
 
-    // Upload appointment data to Firestore
     try {
-      await addDoc(collection(db, "appointments"), appointmentData);
-      // Open Snackbar on successful booking
+      // Open Snackbar to show redirect message
       setSnackbarOpen(true);
+
+      // Construct URL with query parameters for payment gateway
+      const params = new URLSearchParams(appointmentData).toString();
+      const paymentUrl = `/payment-gateway?${params}`;
+
+      // Simulate a delay for redirecting to the payment gateway
+      setTimeout(() => {
+        navigate(paymentUrl); // Redirect to payment gateway with data in the URL
+      }, 2000);
     } catch (error) {
       console.error("Error booking appointment: ", error);
     }
@@ -99,13 +134,14 @@ const Appointment = () => {
                 Select a hospital
               </option>
               {hospitals.map((hospital) => (
-                <option key={hospital.id} value={hospital.name}>
+                <option key={hospital.id} value={hospital.id}>
                   {hospital.name}
                 </option>
               ))}
             </select>
           </div>
 
+          {/* Type of Appointment */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Type of Appointment
@@ -152,9 +188,12 @@ const Appointment = () => {
                   key={index}
                   type="button"
                   onClick={() => handleTimeChange(time)}
+                  disabled={bookedTimes.includes(time)} // Disable if time is booked
                   className={`p-2 border rounded-md text-gray-700 hover:bg-indigo-600 hover:text-white transition duration-200 
                   ${
-                    selectedTime === time
+                    bookedTimes.includes(time)
+                      ? "bg-gray-300 text-gray-400 cursor-not-allowed"
+                      : selectedTime === time
                       ? "bg-indigo-600 text-white"
                       : "bg-white"
                   }`}
@@ -170,11 +209,11 @@ const Appointment = () => {
             type="submit"
             className="w-full py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-200"
           >
-            Book Appointment
+            Proceed to Payment
           </button>
         </form>
 
-        {/* Snackbar for appointment confirmation */}
+        {/* Snackbar for redirect message */}
         <Snackbar
           open={snackbarOpen}
           autoHideDuration={6000}
@@ -182,10 +221,10 @@ const Appointment = () => {
         >
           <Alert
             onClose={handleSnackbarClose}
-            severity="success"
+            severity="info"
             sx={{ width: "100%" }}
           >
-            Appointment successfully booked!
+            Redirecting to payment gateway...
           </Alert>
         </Snackbar>
       </div>
