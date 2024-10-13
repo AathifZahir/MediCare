@@ -31,7 +31,7 @@ export default function Login() {
         if (role === "patient") {
           console.log("User logged in:", email);
           // Redirect to home
-          navigate("/home");
+          navigate("/");
         } else {
           console.error("Unauthorized role:", role);
           // Optionally show an error message to the user

@@ -31,7 +31,7 @@ export default function Login() {
         if (["admin", "doctor", "staff"].includes(role)) {
           console.log("User logged in:", email);
           // Redirect to dashboard
-          navigate("/dashboard");
+          navigate("/admin/dashboard");
         } else {
           console.error("Unauthorized role:", role);
           // Optionally show an error message to the user
