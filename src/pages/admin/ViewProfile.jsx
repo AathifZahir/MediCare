@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import db from "../../firebase/firestore"; // Import your Firestore configuration
 import { collection, getDocs } from "firebase/firestore"; // Import Firestore methods
+import Sidebar from "../../components/AdminSidebar"; // Import Sidebar component
 
 const AdminViewProfile = () => {
   const [users, setUsers] = useState([]);
@@ -37,6 +38,9 @@ const AdminViewProfile = () => {
   });
 
   return (
+    <div className="flex">
+    {/* Sidebar Component */}
+    <Sidebar />
     <div className="bg-gray-100 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-md">
         <h2 className="text-2xl font-bold mb-4">User Profiles</h2>
@@ -84,6 +88,7 @@ const AdminViewProfile = () => {
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 };
