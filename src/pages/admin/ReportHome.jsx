@@ -79,14 +79,11 @@ const ReportHome = () => {
   };
 
   const handleEditReport = (report) => {
-    // Instead of just report ID, pass the whole report object
     if (selectedPatient) {
       navigate(`/admin/reports/edit/${selectedPatient.id}/${report.id}`);
     }
     handleMenuClose();
   };
-  
-  
 
   const handleDeleteReport = async () => {
     if (!selectedReportId) {
@@ -125,8 +122,11 @@ const ReportHome = () => {
     handleMenuClose();
   };
 
+  // Redirect to view report page
   const handleViewReport = () => {
-    console.log("View report for:", selectedPatient.id);
+    if (selectedPatient) {
+      navigate(`/admin/reports/view/${selectedPatient.id}/${selectedReportId}`);
+    }
     handleMenuClose();
   };
 
