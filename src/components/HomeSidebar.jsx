@@ -62,7 +62,7 @@ const Header = () => {
             About
           </a>
           <a
-            href="/report"
+            href="/ViewReport"
             className="flex items-center text-gray-700 hover:text-indigo-600"
           >
             <NotepadText className="h-5 w-5 mr-1" />
