@@ -62,50 +62,33 @@ const AppRoutes = () => {
         <Route
           path="/admin/reports/add/:customerId" // Updated to include :customerId as a route parameter
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
               <AddReport />
             </ProtectedRoute>
           }
         />
 
-
         <Route
           path="/admin/reports/edit/:customerId/:reportId" // reportId added here
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <EditReport/>
+            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+              <EditReport />
             </ProtectedRoute>
           }
         />
 
-
-
-
-
-      <Route
+        <Route
           path="/admin/report" // reportId added here
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <ReportHome/>
+            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+              <ReportHome />
             </ProtectedRoute>
           }
         />
-
-
-
-
-
-
-
-
-
 
         <Route path="/payment-gateway" element={<PaymentGateway />} />
 
         <Route path="/ViewReport" element={<ViewReport />} />
-
-
-        
       </Routes>
     </Router>
   );
