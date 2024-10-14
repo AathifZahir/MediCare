@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from "react";
 import HomeSidebar from "../../components/HomeSidebar";
-import db from "../../firebase/firestore"; // Import Firestore instance
-import { collection, getDocs, query, where } from "firebase/firestore"; // Firestore functions
-import Snackbar from "@mui/material/Snackbar"; // Import Material-UI Snackbar
+import db from "../../firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  doc,
+  getDoc,
+} from "firebase/firestore";
+import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
 
 const appointmentTypes = ["Checkup", "Consultation", "Surgery"];
 
+// Generate time slots
 const timeSlots = Array.from({ length: 13 }, (_, i) => {
   const hour = Math.floor(i / 2) + 10; // Starting from 10 AM
   const minute = (i % 2) * 30; // 0 or 30 minutes
@@ -17,56 +25,84 @@ const timeSlots = Array.from({ length: 13 }, (_, i) => {
 const Appointment = () => {
   const navigate = useNavigate();
   const [hospitals, setHospitals] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [selectedDoctor, setSelectedDoctor] = useState("");
   const [selectedHospital, setSelectedHospital] = useState("");
+  const [selectedHospitalId, setSelectedHospitalId] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedType, setSelectedType] = useState("");
-  const [bookedTimes, setBookedTimes] = useState([]); // Track booked times
-  const [snackbarOpen, setSnackbarOpen] = useState(false); // For Snackbar
+  const [bookedTimes, setBookedTimes] = useState([]);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
-  // Fetch hospitals from Firestore
+  // Fetch doctors from Firestore (based on role)
   useEffect(() => {
-    const fetchHospitals = async () => {
-      const querySnapshot = await getDocs(collection(db, "hospitals"));
-      const hospitalList = querySnapshot.docs.map((doc) => ({
+    const fetchDoctors = async () => {
+      const q = query(collection(db, "users"), where("role", "==", "doctor"));
+      const querySnapshot = await getDocs(q);
+      const doctorList = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-      setHospitals(hospitalList);
+      setDoctors(doctorList);
     };
 
-    fetchHospitals();
+    fetchDoctors();
   }, []);
+
+  // Fetch hospital based on selected doctor
+  const handleDoctorChange = async (event) => {
+    const selectedDoctorId = event.target.value;
+    setSelectedDoctor(selectedDoctorId);
+
+    const doctor = doctors.find((doc) => doc.id === selectedDoctorId);
+
+    if (doctor?.hospital) {
+      try {
+        const hospitalRef = doc(db, "hospitals", doctor.hospital);
+        const hospitalSnap = await getDoc(hospitalRef);
+
+        if (hospitalSnap.exists()) {
+          const hospitalData = hospitalSnap.data();
+          setSelectedHospital(hospitalData.name);
+          setSelectedHospitalId(doctor.hospital);
+        } else {
+          setSelectedHospital("");
+          setSelectedHospitalId("");
+        }
+      } catch (error) {
+        setSelectedHospital("");
+        setSelectedHospitalId("");
+      }
+    } else {
+      setSelectedHospital("");
+      setSelectedHospitalId("");
+    }
+  };
 
   // Fetch appointments for selected hospital and date
   useEffect(() => {
     const fetchAppointments = async () => {
-      if (selectedHospital && selectedDate) {
+      console.log(
+        "Fetching appointments for:",
+        selectedHospitalId,
+        selectedDate
+      );
+      if (selectedHospitalId && selectedDate) {
         const q = query(
           collection(db, "appointments"),
-          where("hospitalId", "==", selectedHospital),
+          where("hospitalId", "==", selectedHospitalId),
           where("date", "==", selectedDate)
         );
         const querySnapshot = await getDocs(q);
         const appointments = querySnapshot.docs.map((doc) => doc.data().time);
-
-        // Log the appointments fetched for the selected date
-        console.log(
-          `Appointments for hospital ${selectedHospital} on ${selectedDate}:`,
-          appointments
-        );
-
+        console.log("Retrieved appointments: ", appointments);
         setBookedTimes(appointments);
       }
     };
 
     fetchAppointments();
   }, [selectedHospital, selectedDate]);
-
-  const handleHospitalChange = (event) => {
-    setSelectedHospital(event.target.value);
-    setBookedTimes([]); // Reset booked times when hospital changes
-  };
 
   const handleDateChange = (event) => {
     setSelectedDate(event.target.value);
@@ -88,27 +124,35 @@ const Appointment = () => {
     event.preventDefault();
 
     const appointmentData = {
-      hospitalId: selectedHospital,
+      doctorId: selectedDoctor,
+      hospitalId: selectedHospitalId,
       type: selectedType,
       date: selectedDate,
       time: selectedTime,
     };
 
     try {
-      // Open Snackbar to show redirect message
       setSnackbarOpen(true);
 
       // Construct URL with query parameters for payment gateway
       const params = new URLSearchParams(appointmentData).toString();
       const paymentUrl = `/payment-gateway?${params}`;
 
-      // Simulate a delay for redirecting to the payment gateway
       setTimeout(() => {
-        navigate(paymentUrl); // Redirect to payment gateway with data in the URL
+        navigate(paymentUrl);
       }, 2000);
     } catch (error) {
       console.error("Error booking appointment: ", error);
     }
+  };
+
+  // Function to get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0"); // January is 0
+    const dd = String(today.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
   };
 
   return (
@@ -119,27 +163,42 @@ const Appointment = () => {
           Book a Hospital Appointment
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Hospital Selection */}
+          {/* Doctor Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Select Hospital
+              Select Doctor
             </label>
             <select
-              value={selectedHospital}
-              onChange={handleHospitalChange}
+              value={selectedDoctor}
+              onChange={handleDoctorChange}
               className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
               required
             >
               <option value="" disabled>
-                Select a hospital
+                Select a doctor
               </option>
-              {hospitals.map((hospital) => (
-                <option key={hospital.id} value={hospital.id}>
-                  {hospital.name}
+              {doctors.map((doctor) => (
+                <option key={doctor.id} value={doctor.id}>
+                  {`${doctor.firstName} ${doctor.lastName}`}
                 </option>
               ))}
             </select>
           </div>
+
+          {/* Display the associated hospital after selecting a doctor */}
+          {selectedHospital && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Hospital
+              </label>
+              <input
+                type="text"
+                value={selectedHospital}
+                readOnly
+                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-gray-100"
+              />
+            </div>
+          )}
 
           {/* Type of Appointment */}
           <div>
@@ -172,6 +231,7 @@ const Appointment = () => {
               type="date"
               value={selectedDate}
               onChange={handleDateChange}
+              min={getTodayDate()} // Set the minimum date to today
               className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
               required
             />
@@ -188,15 +248,15 @@ const Appointment = () => {
                   key={index}
                   type="button"
                   onClick={() => handleTimeChange(time)}
-                  disabled={bookedTimes.includes(time)} // Disable if time is booked
+                  disabled={bookedTimes.includes(time)} // Disable if booked
                   className={`p-2 border rounded-md text-gray-700 hover:bg-indigo-600 hover:text-white transition duration-200 
-                  ${
-                    bookedTimes.includes(time)
-                      ? "bg-gray-300 text-gray-400 cursor-not-allowed"
-                      : selectedTime === time
-                      ? "bg-indigo-600 text-white"
-                      : "bg-white"
-                  }`}
+    ${
+      bookedTimes.includes(time)
+        ? "bg-gray-300 text-gray-400 cursor-not-allowed"
+        : selectedTime === time
+        ? "bg-indigo-600 text-white"
+        : "bg-white"
+    }`}
                 >
                   {time}
                 </button>
@@ -216,15 +276,11 @@ const Appointment = () => {
         {/* Snackbar for redirect message */}
         <Snackbar
           open={snackbarOpen}
-          autoHideDuration={6000}
+          autoHideDuration={2000}
           onClose={handleSnackbarClose}
         >
-          <Alert
-            onClose={handleSnackbarClose}
-            severity="info"
-            sx={{ width: "100%" }}
-          >
-            Redirecting to payment gateway...
+          <Alert onClose={handleSnackbarClose} severity="success">
+            Appointment booked! Redirecting to payment...
           </Alert>
         </Snackbar>
       </div>

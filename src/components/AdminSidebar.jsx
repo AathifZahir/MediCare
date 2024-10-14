@@ -8,30 +8,49 @@ import {
   LogOut,
   HandCoins,
   Hospital,
+  UserPlus,
+  CalendarCheck,
 } from "lucide-react";
 import getUserRole from "../utils/getUserRole"; // Import the getUserRole function
 import { CircularProgress, Box } from "@mui/material"; // Import CircularProgress from Material-UI
 import auth from "../firebase/auth";
 import { signOut } from "firebase/auth";
+import { getDoc, doc } from "firebase/firestore";
+import db from "../firebase/firestore"; // Import the Firestore instance
 
 const navItems = {
   admin: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Transactions", href: "/admin/transactions", icon: HandCoins },
-    { name: "Users", href: "/admin/users", icon: Users },
-    { name: "Products", href: "/admin/products", icon: ShoppingCart },
+    { name: "Patients", href: "/admin/viewprofile", icon: Users },
     { name: "Settings", href: "/admin/settings", icon: Settings },
     { name: "Hospital", href: "/admin/hospital", icon: Hospital },
+    { name: "Register", href: "/admin/Register", icon: UserPlus },
+    {
+      name: "Appointment",
+      href: "/admin/appointments",
+      icon: CalendarCheck,
+    },
   ],
   staff: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Transactions", href: "/admin/transactions", icon: HandCoins },
     { name: "Settings", href: "/admin/settings", icon: Settings },
+    {
+      name: "Appointment",
+      href: "/admin/appointments",
+      icon: CalendarCheck,
+    },
   ],
   doctor: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Transactions", href: "/admin/transactions", icon: HandCoins },
     { name: "Settings", href: "/admin/settings", icon: Settings },
+    {
+      name: "Appointment",
+      href: "/admin/appointments",
+      icon: CalendarCheck,
+    },
   ],
 };
 
@@ -39,6 +58,10 @@ export default function AdminSidebar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userDetails, setUserDetails] = useState({
+    firstName: "",
+    lastName: "",
+  });
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -47,7 +70,28 @@ export default function AdminSidebar() {
       setLoading(false);
     };
 
+    const fetchUserDetails = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setUserDetails({
+              firstName: userData.firstName || "John",
+              lastName: userData.lastName || "Doe",
+            });
+          } else {
+            console.log("No such document!");
+          }
+        } catch (error) {
+          console.error("Error fetching user details:", error);
+        }
+      }
+    };
+
     fetchUserRole();
+    fetchUserDetails();
   }, []);
 
   if (loading) {
@@ -57,25 +101,21 @@ export default function AdminSidebar() {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: "100vh", // Full height of the sidebar
-          backgroundColor: "#1f2937", // Match the sidebar's background color
+          height: "100vh",
+          backgroundColor: "#1f2937",
         }}
       >
-        <CircularProgress size={60} thickness={4} />{" "}
-        {/* Material-UI loading spinner */}
+        <CircularProgress size={60} thickness={4} />
       </Box>
     );
   }
 
   const handleLogout = async () => {
-    console.log("Logout button pressed"); // Check if the function is called
     try {
-      await signOut(auth); // Sign out the user
-      console.log("User signed out"); // Confirm user is signed out
-      window.location.href = "/admin/login"; // Redirect to the login page
+      await signOut(auth);
+      window.location.href = "/admin/login";
     } catch (error) {
       console.error("Logout error:", error);
-      // Optionally show an error message to the user
     }
   };
 
@@ -104,9 +144,10 @@ export default function AdminSidebar() {
           className="flex items-center w-full text-left"
         >
           <div className="flex-1">
-            <h3 className="text-sm font-semibold">John Doe</h3>
-            <p className="text-xs text-gray-400">{userRole}</p>{" "}
-            {/* Display user role */}
+            <h3 className="text-sm font-semibold">
+              {userDetails.firstName} {userDetails.lastName}
+            </h3>
+            <p className="text-xs text-gray-400">{userRole}</p>
           </div>
           <ChevronDown
             className={`h-4 w-4 transition-transform duration-200 ${
@@ -129,7 +170,7 @@ export default function AdminSidebar() {
               Settings
             </a>
             <button
-              onClick={handleLogout} // Move onClick here
+              onClick={handleLogout}
               className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-600 flex items-center"
             >
               <LogOut className="h-4 w-4 mr-2" />

@@ -13,6 +13,7 @@ import Appointment from "../pages/client/Appointment";
 import Hospital from "../pages/admin/Hospital";
 import Profile from "../pages/client/Profile";
 import ViewProfile from "../pages/admin/ViewProfile";
+import AdminAppointment from "../pages/admin/AdminAppointment";
 
 const AppRoutes = () => {
   console.log("AppRoutes component rendered!");
@@ -28,7 +29,6 @@ const AppRoutes = () => {
         <Route path="/admin/register" element={<AdminRegister />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/ViewProfile" element={<ViewProfile />} />
-        
 
         <Route
           path="/admin/dashboard"
@@ -51,6 +51,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <Hospital />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/appointments"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+              <AdminAppointment />
             </ProtectedRoute>
           }
         />

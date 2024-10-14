@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
 import auth from "../../../firebase/auth"; // Import your Firebase auth instance
 import db from "../../../firebase/firestore"; // Import Firestore instance
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore"; // Import Firestore functions
+import { doc, setDoc, collection, getDocs } from "firebase/firestore"; // Import Firestore functions
 
 export default function SignUp() {
   const [firstName, setFirstName] = useState("");
@@ -14,9 +14,30 @@ export default function SignUp() {
   const [address, setAddress] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [role, setRole] = useState("patient"); // New state for role selection
+  const [hospitals, setHospitals] = useState([]); // State to store hospitals
+  const [selectedHospital, setSelectedHospital] = useState(""); // State for selected hospital
 
   const navigate = useNavigate(); // Initialize useNavigate
   const [error, setError] = useState(""); // For handling error messages
+
+  // Fetch hospitals from Firestore
+  useEffect(() => {
+    const fetchHospitals = async () => {
+      try {
+        const hospitalsCollection = collection(db, "hospitals");
+        const hospitalDocs = await getDocs(hospitalsCollection);
+        const hospitalsData = hospitalDocs.docs.map((doc) => ({
+          id: doc.id, // Store the document ID
+          ...doc.data(),
+        }));
+        setHospitals(hospitalsData);
+      } catch (error) {
+        console.error("Error fetching hospitals:", error);
+      }
+    };
+
+    fetchHospitals();
+  }, []);
 
   const validateForm = () => {
     // Check for empty fields
@@ -27,7 +48,8 @@ export default function SignUp() {
       !password ||
       !phoneNumber ||
       !address ||
-      !dateOfBirth
+      !dateOfBirth ||
+      (role !== "admin" && !selectedHospital) // Check if hospital is required
     ) {
       setError("All fields are required.");
       return false;
@@ -95,6 +117,7 @@ export default function SignUp() {
         address,
         dateOfBirth,
         role, // Store the selected role
+        hospital: selectedHospital || "", // Store selected hospital if applicable
       });
 
       console.log("User registered and data saved:", user);
@@ -252,6 +275,8 @@ export default function SignUp() {
                   onChange={(e) => setAddress(e.target.value)}
                 />
               </div>
+
+              {/* Role Selection */}
               <div>
                 <label
                   htmlFor="role"
@@ -262,22 +287,48 @@ export default function SignUp() {
                 <select
                   id="role"
                   name="role"
-                  className="block w-full mt-1 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                 >
-                  <option value="staff">Staff</option>
-                  <option value="doctor">Doctor</option>
                   <option value="admin">Admin</option>
+                  <option value="doctor">Doctor</option>
+                  <option value="staff">Staff</option>
                 </select>
               </div>
+
+              {/* Hospital/Organization Dropdown */}
+              {(role === "doctor" || role === "staff") && (
+                <div>
+                  <label
+                    htmlFor="hospital"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Hospital/Organization
+                  </label>
+                  <select
+                    id="hospital"
+                    name="hospital"
+                    className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    value={selectedHospital}
+                    onChange={(e) => setSelectedHospital(e.target.value)}
+                  >
+                    <option value="">Select Hospital/Organization</option>
+                    {hospitals.map((hospital) => (
+                      <option key={hospital.id} value={hospital.id}>
+                        {hospital.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 
           <div>
             <button
               type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               Sign Up
             </button>

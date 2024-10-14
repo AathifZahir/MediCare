@@ -1,183 +1,223 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import db from "../../firebase/firestore"; // Firestore instance
-import { doc, setDoc, serverTimestamp } from "firebase/firestore"; // Firestore functions
-import Sidebar from "../../components/AdminSidebar"; // Import Sidebar component
-import Snackbar from "@mui/material/Snackbar"; // Snackbar from Material-UI
-import MuiAlert from "@mui/material/Alert"; // Alert for Snackbar messages
+import React, { useState, useEffect } from "react";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
+import db from "../../firebase/firestore";
+import {
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Snackbar,
+  CircularProgress,
+  Button,
+} from "@mui/material";
+import AdminSidebar from "../../components/AdminSidebar";
 
-export default function CreateHospital() {
-  const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
-  const [contactNumber, setContactNumber] = useState("");
-  const [type, setType] = useState("private");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false); // State to trigger Snackbar
+const HospitalPage = () => {
+  const [hospitals, setHospitals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [openModal, setOpenModal] = useState(false);
+  const [editingHospital, setEditingHospital] = useState(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    contactNumber: "",
+    location: "",
+    type: "",
+  });
+  const [snackbar, setSnackbar] = useState({ open: false, message: "" });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [hospitalToDelete, setHospitalToDelete] = useState(null); // Hospital to delete
 
-  const navigate = useNavigate();
+  const hospitalCollectionRef = collection(db, "hospitals");
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const fetchHospitals = async () => {
+    setLoading(true);
+    const data = await getDocs(hospitalCollectionRef);
+    setHospitals(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+    setLoading(false);
+  };
 
-    // Basic validation
-    if (!name || !location || !contactNumber) {
-      setError("All fields are required.");
-      return;
-    }
+  useEffect(() => {
+    fetchHospitals();
+  }, []);
 
-    if (!/^[0-9]{10}$/.test(contactNumber)) {
-      setError("Contact number must be 10 digits.");
-      return;
-    }
-
-    setError(""); // Clear previous error
-
-    try {
-      // Save to Firestore
-      await setDoc(doc(db, "hospitals", name), {
-        name,
-        location,
-        contactNumber,
-        type,
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp(),
+  const handleOpenModal = (hospital = null) => {
+    if (hospital) {
+      setEditingHospital(hospital);
+      setFormData(hospital);
+    } else {
+      setEditingHospital(null);
+      setFormData({
+        name: "",
+        contactNumber: "",
+        location: "",
+        type: "",
       });
+    }
+    setOpenModal(true);
+  };
 
-      setSuccess(true); // Show success message
-      setName("");
-      setLocation("");
-      setContactNumber("");
-      setType("private");
+  const handleCloseModal = () => setOpenModal(false);
 
-      // Optional: Navigate or perform other actions after success
-      // navigate("/admin/hospitals"); // Example navigation
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddOrUpdateHospital = async () => {
+    try {
+      if (editingHospital) {
+        const hospitalDoc = doc(db, "hospitals", editingHospital.id);
+        await updateDoc(hospitalDoc, {
+          ...formData,
+          updated_at: new Date(),
+        });
+        setSnackbar({ open: true, message: "Hospital updated successfully" });
+      } else {
+        await addDoc(hospitalCollectionRef, {
+          ...formData,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+        setSnackbar({ open: true, message: "Hospital added successfully" });
+      }
+      fetchHospitals();
+      handleCloseModal();
     } catch (error) {
-      console.error("Error creating hospital:", error);
-      setError("Error creating hospital: " + error.message);
+      console.error("Error adding/updating hospital: ", error);
+      setSnackbar({ open: true, message: "Error occurred" });
     }
   };
 
-  const handleClose = (event, reason) => {
-    if (reason === "clickaway") return; // Prevent auto-hide on click
-    setSuccess(false); // Close Snackbar
+  const handleOpenDeleteDialog = (hospital) => {
+    setHospitalToDelete(hospital); // Set the hospital to be deleted
+    setDeleteDialogOpen(true); // Open the confirmation dialog
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setHospitalToDelete(null); // Reset the hospital to delete
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      const hospitalDoc = doc(db, "hospitals", hospitalToDelete.id);
+      await deleteDoc(hospitalDoc);
+      fetchHospitals();
+      setSnackbar({ open: true, message: "Hospital deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting hospital: ", error);
+      setSnackbar({ open: true, message: "Error occurred" });
+    } finally {
+      handleCloseDeleteDialog();
+    }
   };
 
   return (
     <div className="flex">
-      {/* Sidebar Component */}
-      <Sidebar />
+      <AdminSidebar />
 
-      {/* Main Content */}
-      <div className="bg-gray-100 min-h-screen flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-lg w-full space-y-8 bg-white p-8 rounded-xl shadow-md">
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create Hospital
-          </h2>
-          {error && <div className="text-red-600 text-center">{error}</div>}
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Hospital Name
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Hospital Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="location"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Location
-              </label>
-              <input
-                id="location"
-                name="location"
-                type="text"
-                required
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="contactNumber"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Contact Number
-              </label>
-              <input
-                id="contactNumber"
-                name="contactNumber"
-                type="tel"
-                required
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Contact Number"
-                value={contactNumber}
-                onChange={(e) => setContactNumber(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="type"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Type
-              </label>
-              <select
-                id="type"
-                name="type"
-                className="block w-full mt-1 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-              >
-                <option value="private">Private</option>
-                <option value="government">Government</option>
-              </select>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Create Hospital
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Success Toast (Snackbar) */}
-        <Snackbar
-          open={success}
-          autoHideDuration={6000}
-          onClose={handleClose}
-          anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      <div className="p-6 flex-1">
+        <h1 className="text-2xl font-bold mb-4">Hospital Management</h1>
+        <button
+          className="bg-blue-500 text-white px-4 py-2 rounded mb-4"
+          onClick={() => handleOpenModal()}
         >
-          <MuiAlert
-            onClose={handleClose}
-            severity="success"
-            sx={{ width: "100%" }}
-          >
-            Hospital created successfully!
-          </MuiAlert>
-        </Snackbar>
+          Add New Hospital
+        </button>
+
+        {loading ? (
+          <div className="flex justify-center items-center">
+            <CircularProgress />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white">
+              <thead>
+                <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                  <th className="py-3 px-6 text-left">Name</th>
+                  <th className="py-3 px-6 text-left">Contact Number</th>
+                  <th className="py-3 px-6 text-left">Location</th>
+                  <th className="py-3 px-6 text-left">Type</th>
+                  <th className="py-3 px-6 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-gray-600 text-sm">
+                {hospitals.map((hospital) => (
+                  <tr key={hospital.id} className="border-b border-gray-200">
+                    <td className="py-3 px-6 text-left whitespace-nowrap">
+                      {hospital.name}
+                    </td>
+                    <td className="py-3 px-6 text-left">
+                      {hospital.contactNumber}
+                    </td>
+                    <td className="py-3 px-6 text-left">{hospital.location}</td>
+                    <td className="py-3 px-6 text-left">{hospital.type}</td>
+                    <td className="py-3 px-6 text-left flex">
+                      <button
+                        className="bg-yellow-400 text-white px-3 py-1 rounded mr-2"
+                        onClick={() => handleOpenModal(hospital)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="bg-red-500 text-white px-3 py-1 rounded"
+                        onClick={() => handleOpenDeleteDialog(hospital)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Modal for adding/updating hospitals */}
+        {/* Your existing modal code here */}
+
+        {/* Delete confirmation dialog */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={handleCloseDeleteDialog}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">{"Confirm Delete"}</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              Are you sure you want to delete this hospital? This action cannot
+              be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDeleteDialog} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmDelete} color="secondary" autoFocus>
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Snackbar for notifications */}
+        <Snackbar
+          open={snackbar.open}
+          message={snackbar.message}
+          autoHideDuration={3000}
+          onClose={() => setSnackbar({ open: false, message: "" })}
+        />
       </div>
     </div>
   );
-}
+};
+
+export default HospitalPage;

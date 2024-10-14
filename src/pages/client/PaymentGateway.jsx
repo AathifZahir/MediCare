@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom"; // Import useLocation for query params
+import { useLocation, useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 import db from "../../firebase/firestore"; // Import your Firestore config
-import { doc, setDoc } from "firebase/firestore"; // Import setDoc to create documents
+import { doc, setDoc, addDoc, collection, getDoc } from "firebase/firestore"; // Use addDoc for creating new transactions
+import auth from "../../firebase/auth"; // Import the auth instance from auth.js
 import { CreditCard, Shield } from "lucide-react"; // Adjust imports based on your usage
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
@@ -13,12 +14,18 @@ const Alert = React.forwardRef(function Alert(props, ref) {
 
 const PaymentGateway = () => {
   const location = useLocation(); // Use useLocation to access the URL
+  const navigate = useNavigate(); // Initialize navigate
   const queryParams = new URLSearchParams(location.search); // Extract query params
 
+  const doctorId = queryParams.get("doctorId");
   const hospitalId = queryParams.get("hospitalId"); // Get hospitalId
-  const type = queryParams.get("type"); // Get type (e.g., "Checkup")
+  const type = queryParams.get("type"); // Get type (e.g., "Consultation")
   const date = queryParams.get("date"); // Get date
   const time = queryParams.get("time"); // Get time
+
+  const [cardNumber, setCardNumber] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
 
   const getAmount = (type) => {
     switch (type) {
@@ -38,9 +45,61 @@ const PaymentGateway = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [userId, setUserId] = useState(null); // State for user ID
+  const [userName, setUserName] = useState({ firstName: "", lastName: "" }); // State for user's first and last name
+
+  // Get user ID and fetch user data on component mount
+  useEffect(() => {
+    const user = auth.currentUser; // Access the current user from the imported auth instance
+    if (user) {
+      setUserId(user.uid); // Set user ID if logged in
+      // Fetch the user's first name and last name from Firestore
+      fetchUserName(user.uid);
+    }
+  }, []);
+
+  // Function to fetch user's first and last name from Firestore
+  const fetchUserName = async (userId) => {
+    try {
+      const userDocRef = doc(db, "users", userId);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        const { firstName, lastName } = userDocSnap.data();
+        setUserName({ firstName, lastName });
+      } else {
+        console.error("No user found with ID:", userId);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
 
   const handlePaymentTypeChange = (type) => {
     setPaymentType(type);
+  };
+
+  const handleCardNumberChange = (event) => {
+    const value = event.target.value
+      .replace(/\D/g, "")
+      .replace(/(\d{4})/g, "$1 ")
+      .trim();
+    if (value.length <= 19) {
+      setCardNumber(value);
+    }
+  };
+
+  const handleCvvChange = (event) => {
+    const value = event.target.value.replace(/\D/g, "").slice(0, 3); // Allow only numeric values
+    setCvv(value);
+  };
+
+  const handleExpiryDateChange = (event) => {
+    const value = event.target.value.replace(/\D/g, "").slice(0, 4); // Allow only numeric values
+    if (value.length > 2) {
+      setExpiryDate(`${value.slice(0, 2)}/${value.slice(2)}`); // Format as MM/YY
+    } else {
+      setExpiryDate(value);
+    }
   };
 
   const validateInputs = () => {
@@ -81,39 +140,75 @@ const PaymentGateway = () => {
       if (paymentSuccess) {
         // Create the appointment data in Firestore
         const appointmentData = {
+          doctorId, // Store the doctor ID
           hospitalId, // Add hospitalId from query params
           type, // Use the type from query params
           amount: Number(amount), // Set amount based on selected type
           paymentType,
           date, // Add date from query params
           time, // Add time from query params
+          userId, // Add the logged-in user ID
+          userName: `${userName.firstName} ${userName.lastName}`, // Add user's name
           timestamp: new Date(),
         };
 
         // Add specific fields based on payment type
         if (paymentType === "card") {
-          appointmentData.cardNumber =
-            document.getElementById("cardNumber").value;
-          appointmentData.expiryDate =
-            document.getElementById("expiryDate").value;
-          appointmentData.cvv = document.getElementById("cvv").value;
+          appointmentData.status = "scheduled";
         } else if (paymentType === "insurance") {
-          appointmentData.policyNumber =
+          appointmentData.status = "pending";
+        }
+
+        // Create the appointment document in Firestore and get its ID
+        const appointmentRef = await addDoc(
+          collection(db, "appointments"),
+          appointmentData
+        );
+        const appointmentId = appointmentRef.id;
+
+        // Create transaction data and store it in Firestore
+        const transactionData = {
+          appointmentId,
+          amount: Number(amount),
+          paymentType,
+          userId, // Add the logged-in user ID to transaction data
+          userName: `${userName.firstName} ${userName.lastName}`, // Add user's name
+          timestamp: new Date(),
+        };
+
+        // Add specific fields based on payment type
+        if (paymentType === "card") {
+          transactionData.cardNumber =
+            document.getElementById("cardNumber").value;
+        } else if (paymentType === "insurance") {
+          transactionData.policyNumber =
             document.getElementById("policyNumber").value;
-          appointmentData.providerName =
+          transactionData.providerName =
             document.getElementById("providerName").value;
         }
 
-        // Console log to check if appointment data is set properly
-        console.log("Appointment Data:", appointmentData);
+        // Store the transaction in the transactions collection and get its ID
+        const transactionRef = await addDoc(
+          collection(db, "transactions"),
+          transactionData
+        );
+        const transactionId = transactionRef.id;
 
-        // Create the appointment document in Firestore
-        const appointmentRef = doc(db, "appointments", hospitalId); // Ensure unique appointment ID logic
-        await setDoc(appointmentRef, appointmentData);
+        // Update the appointment with the transaction ID
+        await setDoc(
+          doc(db, "appointments", appointmentId),
+          { transactionId },
+          { merge: true }
+        );
 
         // Show success Snackbar
         setSnackbarOpen(true);
-        console.log("Payment successful and appointment created!");
+        console.log("Payment successful, appointment and transaction created!");
+
+        // Navigate to home page after displaying the message
+        setTimeout(() => {
+          navigate("/"); // Navigate to the home page after a delay
+        }, 2000); // 2 seconds delay
       } else {
         setError("Payment processing failed. Please try again.");
       }
@@ -172,6 +267,8 @@ const PaymentGateway = () => {
             <input
               type="text"
               id="cardNumber"
+              value={cardNumber}
+              onChange={handleCardNumberChange}
               className="w-full p-2 border rounded"
               placeholder="1234 5678 9012 3456"
               required
@@ -188,6 +285,8 @@ const PaymentGateway = () => {
               type="text"
               id="expiryDate"
               className="w-full p-2 border rounded"
+              value={expiryDate}
+              onChange={handleExpiryDateChange}
               placeholder="MM/YY"
               required
             />
@@ -200,8 +299,10 @@ const PaymentGateway = () => {
               CVV
             </label>
             <input
-              type="password"
+              type="text"
               id="cvv"
+              value={cvv}
+              onChange={handleCvvChange}
               className="w-full p-2 border rounded"
               placeholder="123"
               required
@@ -219,7 +320,7 @@ const PaymentGateway = () => {
                 type="text"
                 id="policyNumber"
                 className="w-full p-2 border rounded"
-                placeholder="Enter policy number"
+                placeholder="Policy Number"
                 required
               />
             </div>
@@ -232,7 +333,7 @@ const PaymentGateway = () => {
                 type="text"
                 id="providerName"
                 className="w-full p-2 border rounded"
-                placeholder="Enter provider name"
+                placeholder="Insurance Provider"
                 required
               />
             </div>
@@ -241,24 +342,19 @@ const PaymentGateway = () => {
 
         <button
           type="submit"
-          className="w-full py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition duration-200"
-          disabled={loading}
+          className="w-full p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+          disabled={loading} // Disable button during loading
         >
-          {loading ? "Processing..." : `Pay ₹${amount}`}
+          {loading ? "Processing..." : `Pay Now LKR ${amount}`}
         </button>
       </form>
 
-      {/* Snackbar for success message */}
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={6000}
+        autoHideDuration={2000}
         onClose={handleSnackbarClose}
       >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity="success"
-          sx={{ width: "100%" }}
-        >
+        <Alert onClose={handleSnackbarClose} severity="success">
           Payment successful!
         </Alert>
       </Snackbar>
