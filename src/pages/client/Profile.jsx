@@ -240,6 +240,15 @@ export default function UserProfile() {
               </button>
             )}
 
+            {/* Delete Profile Button */}
+            <button
+              onClick={handleDelete} // Call the handleDelete function
+              className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              Delete Profile
+            </button>
+
+            {/* Logout Button */}
             <button
               onClick={() => setShowLogoutConfirmation(true)} // Show confirmation modal
               className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
@@ -247,9 +256,8 @@ export default function UserProfile() {
               Logout
             </button>
           </div>
-
-          {/* Logout Confirmation Modal */}
-          {showLogoutConfirmation && (
+            {/* Logout Confirmation Modal */}
+            {showLogoutConfirmation && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
               <div className="bg-white rounded-lg p-6 w-1/3">
                 <h3 className="text-lg font-bold mb-4">Confirm Logout</h3>
@@ -272,26 +280,26 @@ export default function UserProfile() {
             </div>
           )}
         </div>
-
-        {/* Show Large Profile Picture */}
-        {showLargeProfilePic && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75">
-            <div className="bg-white rounded-lg p-4">
-              <img
-                src={userData.profilePictureUrl}
-                alt="Profile"
-                className="w-64 h-64 rounded-full"
-              />
-              <button
-                className="mt-2 px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
-                onClick={() => setShowLargeProfilePic(false)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Large Profile Picture Modal */}
+      {showLargeProfilePic && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-4">
+            <img
+              src={userData.profilePictureUrl}
+              alt="Large Profile"
+              className="w-64 h-64 rounded-full"
+            />
+            <button
+              onClick={() => setShowLargeProfilePic(false)}
+              className="mt-2 text-red-600 hover:text-red-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
