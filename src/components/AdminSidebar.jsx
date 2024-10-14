@@ -26,6 +26,7 @@ const navItems = {
     { name: "Patients", href: "/admin/viewprofile", icon: Users },
     { name: "Settings", href: "/admin/settings", icon: Settings },
     { name: "Hospital", href: "/admin/hospital", icon: Hospital },
+    { name: "Report", href: "/admin/report", icon:   NotepadText },
   ],
   staff: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
