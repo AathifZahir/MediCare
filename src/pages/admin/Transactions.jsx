@@ -10,7 +10,13 @@ import {
 import { CreditCard, Shield, Banknote, X } from "lucide-react";
 import AdminSidebar from "../../components/AdminSidebar";
 import db from "../../firebase/firestore";
-import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  updateDoc,
+  doc,
+  addDoc,
+} from "firebase/firestore";
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
@@ -18,6 +24,14 @@ const Transactions = () => {
   const [confirmationInfo, setConfirmationInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [addTransactionModalOpen, setAddTransactionModalOpen] = useState(false);
+  const [newTransaction, setNewTransaction] = useState({
+    fullName: "",
+    paymentType: "card",
+    amount: "",
+    userId: "",
+    appointmentId: "",
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,9 +71,8 @@ const Transactions = () => {
         // Combine transaction data with user names and appointment statuses
         const updatedTransactions = transactionList.map((transaction) => ({
           ...transaction,
-          fullName: usersData[transaction.userId] || "Unknown User",
-          status:
-            appointmentsData[transaction.appointmentId] || "Unknown Status",
+          fullName: usersData[transaction.userId] || transaction.userName,
+          status: appointmentsData[transaction.appointmentId] || "completed",
         }));
 
         console.log("Updated Transactions:", updatedTransactions);
@@ -132,6 +145,112 @@ const Transactions = () => {
     }
   };
 
+  const handleAddTransaction = async () => {
+    try {
+      // You may want to validate the input fields here
+
+      // Add the new transaction to Firestore
+      const newTransactionDocRef = await addDoc(
+        collection(db, "transactions"),
+        {
+          ...newTransaction,
+          userId: "", // Add the userId if necessary, otherwise set it as needed
+          appointmentId: "", // Add the appointmentId if necessary
+          status: "pending", // Set the initial status to pending
+        }
+      );
+
+      // Update the UI with the new transaction
+      setTransactions([
+        ...transactions,
+        { id: newTransactionDocRef.id, ...newTransaction, status: "pending" },
+      ]);
+
+      // Close the modal and reset the form
+      setAddTransactionModalOpen(false);
+      setNewTransaction({
+        fullName: "",
+        paymentType: "card",
+        amount: "",
+        userId: "",
+        appointmentId: "",
+      });
+    } catch (error) {
+      console.error("Error adding transaction:", error);
+    }
+  };
+
+  const handleEditTransaction = (transaction) => {
+    setAddTransactionModalOpen(true);
+    setNewTransaction(transaction);
+  };
+
+  const handleDeleteTransaction = (transaction) => {
+    setConfirmationInfo(transaction);
+    setConfirmDialogOpen(true);
+  };
+
+  const confirmDeleteTransaction = async () => {
+    if (confirmationInfo) {
+      try {
+        // Delete the transaction from Firestore
+        const transactionDocRef = doc(db, "transactions", confirmationInfo.id);
+        await deleteDoc(transactionDocRef);
+
+        // Update the UI to reflect the deleted transaction
+        setTransactions(
+          transactions.filter((t) => t.id !== confirmationInfo.id)
+        );
+      } catch (error) {
+        console.error("Error deleting transaction:", error);
+      } finally {
+        setConfirmDialogOpen(false);
+        setConfirmationInfo(null);
+      }
+    }
+  };
+
+  const handleSaveTransaction = async () => {
+    try {
+      if (newTransaction.id) {
+        // Update the existing transaction
+        const transactionDocRef = doc(db, "transactions", newTransaction.id);
+        await updateDoc(transactionDocRef, {
+          ...newTransaction,
+        });
+      } else {
+        // Add a new transaction
+        const newTransactionDocRef = await addDoc(
+          collection(db, "transactions"),
+          {
+            ...newTransaction,
+            userId: "", // Add the userId if necessary, otherwise set it as needed
+            appointmentId: "", // Add the appointmentId if necessary
+            status: "pending", // Set the initial status to pending
+          }
+        );
+
+        // Update the UI with the new transaction
+        setTransactions([
+          ...transactions,
+          { id: newTransactionDocRef.id, ...newTransaction, status: "pending" },
+        ]);
+      }
+
+      // Close the modal and reset the form
+      setAddTransactionModalOpen(false);
+      setNewTransaction({
+        fullName: "",
+        paymentType: "card",
+        amount: "",
+        userId: "",
+        appointmentId: "",
+      });
+    } catch (error) {
+      console.error("Error saving transaction:", error);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
@@ -141,7 +260,7 @@ const Transactions = () => {
             Transaction Table
           </h1>
           <button
-            onClick={() => setAddTransactionModalOpen(true)}
+            onClick={() => setAddTransactionModalOpen(true)} // Open the modal
             className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
           >
             Add Transaction
@@ -194,7 +313,7 @@ const Transactions = () => {
                   <tr key={transaction.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {transaction.fullName}
+                        {transaction.userName}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -208,7 +327,7 @@ const Transactions = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        ${transaction.amount.toFixed(2)}
+                        ${transaction.amount}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -224,12 +343,26 @@ const Transactions = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {transaction.status === "pending" && (
-                        <button
-                          onClick={() => handleStatusChange(transaction)}
-                          className="text-indigo-600 hover:text-indigo-900 bg-indigo-100 hover:bg-indigo-200 px-3 py-1 rounded-full transition duration-300"
-                        >
-                          Mark as Paid
-                        </button>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleStatusChange(transaction)}
+                            className="text-indigo-600 hover:text-indigo-900 bg-indigo-100 hover:bg-indigo-200 px-3 py-1 rounded-full transition duration-300"
+                          >
+                            Mark as Paid
+                          </button>
+                          <button
+                            onClick={() => handleEditTransaction(transaction)}
+                            className="text-blue-600 hover:text-blue-900 bg-blue-100 hover:bg-blue-200 px-3 py-1 rounded-full transition duration-300"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTransaction(transaction)}
+                            className="text-red-600 hover:text-red-900 bg-red-100 hover:bg-red-200 px-3 py-1 rounded-full transition duration-300"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -259,6 +392,172 @@ const Transactions = () => {
           </DialogActions>
         </Dialog>
 
+        <div
+          class={`fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center ${
+            addTransactionModalOpen ? "block" : "hidden"
+          }`}
+        >
+          <div class="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-2xl font-bold text-gray-800">
+                {newTransaction.id ? "Edit Transaction" : "Add New Transaction"}
+              </h2>
+              <button
+                onClick={() => setAddTransactionModalOpen(false)}
+                class="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={newTransaction.fullName}
+                  onChange={(e) =>
+                    setNewTransaction({
+                      ...newTransaction,
+                      fullName: e.target.value,
+                    })
+                  }
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700">
+                  Payment Type
+                </label>
+                <select
+                  value={newTransaction.paymentType}
+                  onChange={(e) =>
+                    setNewTransaction({
+                      ...newTransaction,
+                      paymentType: e.target.value,
+                    })
+                  }
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                >
+                  <option value="card">Card</option>
+                  <option value="cash">Cash</option>
+                  <option value="insurance">Insurance</option>
+                </select>
+              </div>
+
+              {newTransaction.paymentType === "card" && (
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">
+                    Card Number
+                  </label>
+                  <input
+                    type="text"
+                    value={newTransaction.cardNumber}
+                    onChange={(e) =>
+                      setNewTransaction({
+                        ...newTransaction,
+                        cardNumber: e.target.value,
+                      })
+                    }
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
+              )}
+
+              {newTransaction.paymentType === "insurance" && (
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">
+                    Policy Number
+                  </label>
+                  <input
+                    type="text"
+                    value={newTransaction.policyNumber}
+                    onChange={(e) =>
+                      setNewTransaction({
+                        ...newTransaction,
+                        policyNumber: e.target.value,
+                      })
+                    }
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
+              )}
+
+              {newTransaction.paymentType === "insurance" && (
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">
+                    Provider Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newTransaction.providerName}
+                    onChange={(e) =>
+                      setNewTransaction({
+                        ...newTransaction,
+                        providerName: e.target.value,
+                      })
+                    }
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700">
+                  Amount
+                </label>
+                <input
+                  type="number"
+                  value={newTransaction.amount}
+                  onChange={(e) =>
+                    setNewTransaction({
+                      ...newTransaction,
+                      amount: e.target.value,
+                    })
+                  }
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+            </form>
+
+            <div class="flex justify-end space-x-2">
+              <button
+                class="bg-white hover:bg-gray-100 mt-5 text-gray -800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
+                onClick={() => setAddTransactionModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                class="bg-blue-500 hover:bg-blue-700 mt-5 text-white font-semibold py-2 px-4 border border-blue-700 rounded shadow"
+                onClick={handleSaveTransaction}
+              >
+                {newTransaction.id ? "Save Changes" : "Add Transaction"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <Dialog
+          open={confirmDialogOpen}
+          onClose={() => setConfirmDialogOpen(false)}
+        >
+          <DialogTitle>Confirm Delete</DialogTitle>
+          <DialogContent>
+            Are you sure you want to delete this transaction?
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmDialogOpen(false)} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={confirmDeleteTransaction} color="secondary">
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {modalInfo && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
             <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
@@ -282,7 +581,7 @@ const Transactions = () => {
                   </p>
                 </div>
                 <p className="text-sm text-gray-700">
-                  Amount: ${modalInfo.amount.toFixed(2)}
+                  Amount: LKR {modalInfo.amount}
                 </p>
                 <p className="text-sm text-gray-700">
                   Status: {modalInfo.status}
