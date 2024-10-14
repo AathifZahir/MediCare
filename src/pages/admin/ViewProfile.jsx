@@ -11,25 +11,27 @@ const AdminViewProfile = () => {
   const [isModalOpen, setIsModalOpen] = useState(false); // State to manage modal visibility
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchPatients = async () => {
       try {
-        const userCollection = collection(db, "users"); // Reference to the users collection
+        const userCollection = collection(db, "users");
         const userSnapshot = await getDocs(userCollection);
-        const userList = userSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setUsers(userList); // Set the fetched user data
+        const patientList = userSnapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter((user) => user.role === "patient"); // Filter only patient records
+        setUsers(patientList); // Set the fetched patient data
       } catch (err) {
-        console.error("Error fetching user data:", err);
-        setError("Failed to fetch user data.");
+        console.error("Error fetching patient data:", err);
+        setError("Failed to fetch patient data.");
       }
     };
 
-    fetchUsers();
+    fetchPatients();
   }, []);
 
-  // Filter users based on search term
+  // Filter patients based on search term
   const filteredUsers = users.filter((user) => {
     const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
     return (
@@ -56,7 +58,7 @@ const AdminViewProfile = () => {
       <Sidebar />
       <div className="bg-gray-100 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto bg-white p-8 rounded-xl shadow-md">
-          <h2 className="text-2xl font-bold mb-4">User Profiles</h2>
+          <h2 className="text-2xl font-bold mb-4">Patient Profiles</h2>
           {error && <div className="text-red-600 mb-4">{error}</div>}
 
           {/* Search Input */}
@@ -109,7 +111,7 @@ const AdminViewProfile = () => {
               ) : (
                 <tr>
                   <td colSpan="8" className="border border-gray-300 p-2 text-center">
-                    No users found.
+                    No patients found.
                   </td>
                 </tr>
               )}
