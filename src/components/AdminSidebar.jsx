@@ -10,6 +10,7 @@ import {
   Hospital,
   UserPlus,
   CalendarCheck,
+  NotepadText,
 } from "lucide-react";
 import getUserRole from "../utils/getUserRole"; // Import the getUserRole function
 import { CircularProgress, Box } from "@mui/material"; // Import CircularProgress from Material-UI
@@ -25,12 +26,6 @@ const navItems = {
     { name: "Patients", href: "/admin/viewprofile", icon: Users },
     { name: "Settings", href: "/admin/settings", icon: Settings },
     { name: "Hospital", href: "/admin/hospital", icon: Hospital },
-    { name: "Register", href: "/admin/Register", icon: UserPlus },
-    {
-      name: "Appointment",
-      href: "/admin/appointments",
-      icon: CalendarCheck,
-    },
   ],
   staff: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -66,6 +61,7 @@ export default function AdminSidebar() {
   useEffect(() => {
     const fetchUserRole = async () => {
       const role = await getUserRole();
+      console.log("Fetched User Role:", role); // Debugging line
       setUserRole(role);
       setLoading(false);
     };

@@ -8,10 +8,12 @@ import { useNavigate } from "react-router-dom"; // Import useNavigate for routin
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState(""); // State for error messages
   const navigate = useNavigate(); // Initialize useNavigate
 
   const handleLogin = async (event) => {
     event.preventDefault();
+    setError(""); // Reset error message
 
     try {
       const userCredential = await signInWithEmailAndPassword(
@@ -34,14 +36,22 @@ export default function Login() {
           navigate("/");
         } else {
           console.error("Unauthorized role:", role);
-          // Optionally show an error message to the user
+          setError("Unauthorized access. Please contact support.");
         }
       } else {
         console.error("No user data found!");
+        setError("No user data found. Please contact support.");
       }
     } catch (error) {
       console.error("Error logging in:", error);
-      // Optionally show an error message to the user
+      // Provide feedback to the user based on the error code
+      if (error.code === "auth/too-many-requests") {
+        setError(
+          "Your account has been temporarily disabled due to many failed login attempts. Please reset your password or try again later."
+        );
+      } else {
+        setError("Login failed. Please check your credentials and try again.");
+      }
     }
   };
 
@@ -53,6 +63,11 @@ export default function Login() {
             Sign in to your account
           </h2>
         </div>
+        {error && (
+          <div className="bg-red-200 text-red-600 p-3 rounded-md mb-4">
+            {error}
+          </div>
+        )}
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div>
             <label
