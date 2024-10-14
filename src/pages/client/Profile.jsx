@@ -15,31 +15,38 @@ export default function UserProfile() {
     phoneNumber: "",
     address: "",
     dateOfBirth: "",
-    profilePictureUrl: "", // Add profilePictureUrl
+    profilePictureUrl: "",
   });
-  const [isEditing, setIsEditing] = useState(false); // State for toggling edit mode
-  const [isChangingPassword, setIsChangingPassword] = useState(false); // State for toggling password change form
+  const [isEditing, setIsEditing] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [error, setError] = useState("");
-  const [newPassword, setNewPassword] = useState(""); // State for new password
-  const [currentPassword, setCurrentPassword] = useState(""); // State for current password
+  const [newPassword, setNewPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
+  const [showLargeProfilePic, setShowLargeProfilePic] = useState(false); // State for large profile picture
   const navigate = useNavigate();
   const user = auth.currentUser;
 
   useEffect(() => {
     // Redirect to profile if user is not authenticated
     if (!user) {
-      navigate("/profile", { replace: true }); // Replace the current entry with the login page
+      navigate("/profile", { replace: true });
       return;
     }
 
     // Fetch user data from Firestore
     const fetchUserData = async () => {
       try {
-        const userDoc = doc(db, "users", user.uid); // Define the document reference
-        const userSnapshot = await getDoc(userDoc); // Fetch the document
+        const userDoc = doc(db, "users", user.uid);
+        const userSnapshot = await getDoc(userDoc);
         
         if (userSnapshot.exists()) {
-          setUserData(userSnapshot.data());
+          const userData = userSnapshot.data();
+          if (userData.role === "patient") { // Only proceed if the role is 'patient'
+            setUserData(userData);
+          } else {
+            setError("Access denied: You do not have permission to view this profile.");
+          }
         } else {
           console.log("User data not found");
         }
@@ -56,7 +63,7 @@ export default function UserProfile() {
   const handleDelete = async () => {
     if (!user) return;
 
-    const email = user.email; // Get the user's email
+    const email = user.email;
     const password = prompt("Please enter your password to confirm deletion:");
 
     if (!password) {
@@ -67,14 +74,11 @@ export default function UserProfile() {
     const credential = EmailAuthProvider.credential(email, password);
 
     try {
-      // Re-authenticate the user
       await reauthenticateWithCredential(user, credential);
-
-      // If re-authentication is successful, proceed to delete the profile
       await deleteDoc(doc(db, "users", user.uid));
       await user.delete(); // Delete Firebase Authentication user
       console.log("User profile deleted successfully");
-      navigate("/login"); // Redirect to signup page after deletion
+      navigate("/login");
     } catch (err) {
       if (err.code === "auth/wrong-password") {
         setError("Incorrect password. Please try again.");
@@ -96,13 +100,11 @@ export default function UserProfile() {
     const credential = EmailAuthProvider.credential(user.email, currentPassword);
 
     try {
-      // Re-authenticate the user
       await reauthenticateWithCredential(user, credential);
-      // Update the password
       await updatePassword(user, newPassword);
       setNewPassword("");
       setCurrentPassword("");
-      setIsChangingPassword(false); // Close password change form
+      setIsChangingPassword(false);
       alert("Password changed successfully.");
     } catch (error) {
       if (error.code === "auth/wrong-password") {
@@ -117,9 +119,9 @@ export default function UserProfile() {
   // Handle logout
   const handleLogout = async () => {
     try {
-      await signOut(auth); // Sign out the user
+      await signOut(auth);
       alert("Logged out successfully.");
-      navigate("/login"); // Redirect to login page after logout
+      navigate("/login");
     } catch (error) {
       console.error("Logout Error", error);
       alert("Error logging out.");
@@ -146,12 +148,12 @@ export default function UserProfile() {
             />
           ) : (
             <div className="space-y-4">
-              {/* Display profile picture if available */}
               {userData.profilePictureUrl && (
                 <img
                   src={userData.profilePictureUrl}
                   alt="Profile"
-                  className="w-32 h-32 rounded-full mx-auto"
+                  className="w-32 h-32 rounded-full mx-auto cursor-pointer" // Add cursor pointer for interaction
+                  onClick={() => setShowLargeProfilePic(true)} // Show large picture on click
                 />
               )}
               <p className="text-gray-900">First Name: {userData.firstName}</p>
@@ -167,7 +169,7 @@ export default function UserProfile() {
           {!isChangingPassword ? (
             <button
               type="button"
-              onClick={() => setIsChangingPassword(true)} // Show password change form
+              onClick={() => setIsChangingPassword(true)}
               className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-indigo-600 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               Change Password
@@ -211,7 +213,7 @@ export default function UserProfile() {
               <div>
                 <button
                   type="button"
-                  onClick={() => setIsChangingPassword(false)} // Hide password change form
+                  onClick={() => setIsChangingPassword(false)}
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-600 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                 >
                   Cancel
@@ -224,37 +226,71 @@ export default function UserProfile() {
           <div className="flex space-x-4">
             {isEditing ? (
               <button
-                type="button"
-                onClick={() => setIsEditing(false)} // Close edit mode
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-600 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                onClick={() => setIsEditing(false)}
+                className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Cancel
               </button>
             ) : (
               <button
-                type="button"
-                onClick={() => setIsEditing(true)} // Open edit mode
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                onClick={() => setIsEditing(true)}
+                className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Edit Profile
               </button>
             )}
+
             <button
-              type="button"
-              onClick={handleDelete} // Delete profile
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-red-600 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-            >
-              Delete Profile
-            </button>
-            <button
-              type="button"
-              onClick={handleLogout} // Logout
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              onClick={() => setShowLogoutConfirmation(true)} // Show confirmation modal
+              className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
               Logout
             </button>
           </div>
+
+          {/* Logout Confirmation Modal */}
+          {showLogoutConfirmation && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+              <div className="bg-white rounded-lg p-6 w-1/3">
+                <h3 className="text-lg font-bold mb-4">Confirm Logout</h3>
+                <p>Are you sure you want to logout?</p>
+                <div className="flex justify-end mt-4">
+                  <button
+                    className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400 mr-2"
+                    onClick={() => setShowLogoutConfirmation(false)} // Close the modal
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    onClick={handleLogout} // Proceed with logout
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Show Large Profile Picture */}
+        {showLargeProfilePic && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75">
+            <div className="bg-white rounded-lg p-4">
+              <img
+                src={userData.profilePictureUrl}
+                alt="Profile"
+                className="w-64 h-64 rounded-full"
+              />
+              <button
+                className="mt-2 px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
+                onClick={() => setShowLargeProfilePic(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
