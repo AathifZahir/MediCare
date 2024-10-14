@@ -13,6 +13,9 @@ import Appointment from "../pages/client/Appointment";
 import Hospital from "../pages/admin/Hospital";
 import Profile from "../pages/client/Profile";
 import ViewProfile from "../pages/admin/ViewProfile";
+import AddReport from "../pages/admin/AddReport";
+import ReportHome from "../pages/admin/ReportHome";
+import EditReport from "../pages/admin/EditReport";
 
 const AppRoutes = () => {
   console.log("AppRoutes component rendered!");
@@ -54,6 +57,25 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+
+<Route
+  path="/admin/reports/add/:customerId" // Updated to include :customerId as a route parameter
+  element={
+    <ProtectedRoute allowedRoles={["admin"]}>
+      <AddReport />
+    </ProtectedRoute>
+  }
+/>
+
+
+<Route
+  path="/admin/reports/edit/:customerId/:reportId" // reportId added here
+  element={
+    <ProtectedRoute allowedRoles={["admin"]}>
+      <EditReport/>
+    </ProtectedRoute>
+  }
+/>
 
         <Route path="/payment-gateway" element={<PaymentGateway />} />
       </Routes>

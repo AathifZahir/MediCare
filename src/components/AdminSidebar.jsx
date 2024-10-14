@@ -8,6 +8,7 @@ import {
   LogOut,
   HandCoins,
   Hospital,
+  NotepadText,
 } from "lucide-react";
 import getUserRole from "../utils/getUserRole"; // Import the getUserRole function
 import { CircularProgress, Box } from "@mui/material"; // Import CircularProgress from Material-UI
@@ -22,6 +23,7 @@ const navItems = {
     { name: "Products", href: "/admin/products", icon: ShoppingCart },
     { name: "Settings", href: "/admin/settings", icon: Settings },
     { name: "Hospital", href: "/admin/hospital", icon: Hospital },
+    { name: "Report", href: "/ReportHome", icon: NotepadText },
   ],
   staff: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -43,6 +45,7 @@ export default function AdminSidebar() {
   useEffect(() => {
     const fetchUserRole = async () => {
       const role = await getUserRole();
+      console.log("Fetched User Role:", role); // Debugging line
       setUserRole(role);
       setLoading(false);
     };
