@@ -147,7 +147,7 @@ const ReportHome = () => {
       <Sidebar />
       <div className="flex-1 p-8 overflow-auto">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold mb-6">Patient List</h2>
+          <h2 className="text-3xl font-bold mb-6">Report Home</h2>
           {error && <div className="text-red-600 text-center mb-4">{error}</div>}
           {loading ? (
             <div className="text-center">Loading...</div>

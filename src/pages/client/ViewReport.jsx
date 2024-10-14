@@ -3,6 +3,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import db from "../../firebase/firestore"; // Firestore instance
+import HomeSidebar from "../../components/HomeSidebar";
 
 export default function ViewReport() {
   const [report, setReport] = useState(null);
@@ -54,6 +55,8 @@ export default function ViewReport() {
   }
 
   return (
+    <div>
+      <HomeSidebar />
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl w-full bg-white p-8 rounded-lg shadow-lg">
         <h2 className="text-2xl font-semibold mb-4 text-gray-800">Report Details</h2>
@@ -92,6 +95,7 @@ export default function ViewReport() {
 
         {!report && <p>No report data available.</p>}
       </div>
+    </div>
     </div>
   );
 }
