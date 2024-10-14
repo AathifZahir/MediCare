@@ -1,78 +1,117 @@
 import React, { useState, useEffect } from "react";
-import { CircularProgress } from "@mui/material";
+import {
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+} from "@mui/material";
 import { CreditCard, Shield, Banknote, X } from "lucide-react";
 import AdminSidebar from "../../components/AdminSidebar";
-
-const initialTransactions = [
-  {
-    id: 1,
-    fullName: "John Doe",
-    type: "card",
-    amount: 100.0,
-    status: "pending",
-    cardNumber: "**** **** **** 1234",
-  },
-  {
-    id: 2,
-    fullName: "Jane Smith",
-    type: "insurance",
-    amount: 250.0,
-    status: "paid",
-    policyNumber: "INS-12345",
-    providerName: "Health Co.",
-  },
-  {
-    id: 3,
-    fullName: "Bob Johnson",
-    type: "cash",
-    amount: 50.0,
-    status: "pending",
-  },
-  {
-    id: 4,
-    fullName: "Alice Brown",
-    type: "card",
-    amount: 75.5,
-    status: "paid",
-    cardNumber: "**** **** **** 5678",
-  },
-];
+import db from "../../firebase/firestore";
+import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 
 const Transactions = () => {
-  const [transactions, setTransactions] = useState(initialTransactions);
+  const [transactions, setTransactions] = useState([]);
   const [modalInfo, setModalInfo] = useState(null);
   const [confirmationInfo, setConfirmationInfo] = useState(null);
-  const [loading, setLoading] = useState(true); // Loading state
+  const [loading, setLoading] = useState(true);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Simulate a fetch call
     const fetchData = async () => {
-      // Simulate a delay for loading
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      // You can replace this with actual fetching logic
-      setTransactions(initialTransactions); // Set your fetched transactions here
-      setLoading(false); // Set loading to false after data is fetched
+      try {
+        // Fetch transactions
+        const transactionsCollection = collection(db, "transactions");
+        const transactionSnapshot = await getDocs(transactionsCollection);
+        const transactionList = transactionSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        console.log("Transactions fetched:", transactionList);
+
+        // Fetch users
+        const usersCollection = collection(db, "users");
+        const usersSnapshot = await getDocs(usersCollection);
+        const usersData = {};
+        usersSnapshot.forEach((doc) => {
+          const user = doc.data();
+          usersData[doc.id] = `${user.firstName} ${user.lastName}`; // Use document ID as the key
+        });
+
+        console.log("Users fetched:", usersData);
+
+        // Fetch appointments
+        const appointmentsCollection = collection(db, "appointments");
+        const appointmentsSnapshot = await getDocs(appointmentsCollection);
+        const appointmentsData = {};
+        appointmentsSnapshot.forEach((doc) => {
+          const appointment = doc.data();
+          appointmentsData[doc.id] = appointment.status; // Use document ID as the key
+        });
+
+        console.log("Appointments fetched:", appointmentsData);
+
+        // Combine transaction data with user names and appointment statuses
+        const updatedTransactions = transactionList.map((transaction) => ({
+          ...transaction,
+          fullName: usersData[transaction.userId] || "Unknown User",
+          status:
+            appointmentsData[transaction.appointmentId] || "Unknown Status",
+        }));
+
+        console.log("Updated Transactions:", updatedTransactions);
+
+        setTransactions(updatedTransactions);
+      } catch (error) {
+        console.error("Error fetching transactions:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
   }, []);
 
-  const handleStatusChange = (id) => {
-    setConfirmationInfo({ id, newStatus: "paid" });
+  const handleStatusChange = (transaction) => {
+    setConfirmationInfo(transaction);
+    setConfirmDialogOpen(true); // Open the confirmation dialog
   };
 
-  const confirmStatusChange = () => {
-    setTransactions(
-      transactions.map((t) =>
-        t.id === confirmationInfo.id
-          ? { ...t, status: confirmationInfo.newStatus }
-          : t
-      )
-    );
-    setConfirmationInfo(null);
+  const confirmStatusChange = async () => {
+    if (confirmationInfo) {
+      try {
+        // Update the appointment status in Firestore
+        const appointmentDocRef = doc(
+          db,
+          "appointments",
+          confirmationInfo.appointmentId
+        );
+        await updateDoc(appointmentDocRef, {
+          status: "scheduled", // Update to the desired status
+        });
+
+        // Update state
+        setTransactions(
+          transactions.map((t) =>
+            t.appointmentId === confirmationInfo.appointmentId
+              ? { ...t, status: "scheduled" }
+              : t
+          )
+        );
+      } catch (error) {
+        console.error("Error updating appointment status:", error);
+      } finally {
+        setConfirmDialogOpen(false); // Close the confirmation dialog
+        setConfirmationInfo(null); // Clear the selected transaction
+      }
+    }
   };
 
   const openModal = (transaction) => {
+    console.log("Opening modal for transaction:", transaction);
     setModalInfo(transaction);
   };
 
@@ -97,9 +136,17 @@ const Transactions = () => {
     <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
       <div className="flex-1 p-6">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">
-          Transaction Table
-        </h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">
+            Transaction Table
+          </h1>
+          <button
+            onClick={() => setAddTransactionModalOpen(true)}
+            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+          >
+            Add Transaction
+          </button>
+        </div>
 
         {loading ? (
           <div className="flex justify-center items-center h-full">
@@ -155,8 +202,8 @@ const Transactions = () => {
                         onClick={() => openModal(transaction)}
                         className="flex items-center text-sm text-blue-600 hover:text-blue-900"
                       >
-                        {getTypeIcon(transaction.type)}
-                        <span className="ml-2">{transaction.type}</span>
+                        {getTypeIcon(transaction.paymentType)}
+                        <span className="ml-2">{transaction.paymentType}</span>
                       </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -178,7 +225,7 @@ const Transactions = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {transaction.status === "pending" && (
                         <button
-                          onClick={() => handleStatusChange(transaction.id)}
+                          onClick={() => handleStatusChange(transaction)}
                           className="text-indigo-600 hover:text-indigo-900 bg-indigo-100 hover:bg-indigo-200 px-3 py-1 rounded-full transition duration-300"
                         >
                           Mark as Paid
@@ -192,6 +239,26 @@ const Transactions = () => {
           </div>
         )}
 
+        {/* Confirmation Dialog */}
+        <Dialog
+          open={confirmDialogOpen}
+          onClose={() => setConfirmDialogOpen(false)}
+        >
+          <DialogTitle>Confirm Status Change</DialogTitle>
+          <DialogContent>
+            Are you sure you want to mark the related appointment as
+            "scheduled"?
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmDialogOpen(false)} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={confirmStatusChange} color="secondary">
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         {modalInfo && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
             <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
@@ -201,51 +268,27 @@ const Transactions = () => {
                 </h2>
                 <button
                   onClick={closeModal}
-                  className="text-gray-500 hover:text-gray-700 transition duration-300"
+                  className="text-gray-500 hover:text-gray-700"
                 >
-                  <X size={24} />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  {getTypeIcon(modalInfo.type)}
-                  <span className="ml-2 text-lg font-medium text-gray-700 capitalize">
-                    {modalInfo.type}
-                  </span>
-                </div>
-                {modalInfo.type === "card" && (
-                  <p className="text-gray-600">
-                    <span className="font-medium">Card Number:</span>{" "}
-                    {modalInfo.cardNumber}
+
+              <div>
+                <div className="flex items-center mb-4">
+                  {getTypeIcon(modalInfo.paymentType)}
+                  <p className="ml-2 text-sm text-gray-700">
+                    Payment Type: {modalInfo.paymentType}
                   </p>
-                )}
-                {modalInfo.type === "insurance" && (
-                  <>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Policy Number:</span>{" "}
-                      {modalInfo.policyNumber}
-                    </p>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Provider Name:</span>{" "}
-                      {modalInfo.providerName}
-                    </p>
-                  </>
-                )}
-                <p className="text-gray-600">
-                  <span className="font-medium">Amount:</span> $
-                  {modalInfo.amount.toFixed(2)}
+                </div>
+                <p className="text-sm text-gray-700">
+                  Amount: ${modalInfo.amount.toFixed(2)}
                 </p>
-                <p className="text-gray-600">
-                  <span className="font-medium">Status:</span>
-                  <span
-                    className={`ml-2 px-2 py-1 text-xs font-semibold rounded-full ${
-                      modalInfo.status === "paid"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {modalInfo.status}
-                  </span>
+                <p className="text-sm text-gray-700">
+                  Status: {modalInfo.status}
+                </p>
+                <p className="text-sm text-gray-700">
+                  Full Name: {modalInfo.fullName}
                 </p>
               </div>
             </div>
