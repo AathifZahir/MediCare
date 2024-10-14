@@ -62,6 +62,15 @@ const AppRoutes = () => {
         />
 
         <Route
+          path="/admin/appointments"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+              <AdminAppointment />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/admin/reports/add/:customerId" // Updated to include :customerId as a route parameter
           element={
             <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>

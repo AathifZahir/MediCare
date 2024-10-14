@@ -23,10 +23,15 @@ const navItems = {
   admin: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Transactions", href: "/admin/transactions", icon: HandCoins },
+    {
+      name: "Appointment",
+      href: "/admin/appointments",
+      icon: CalendarCheck,
+    },
     { name: "Patients", href: "/admin/viewprofile", icon: Users },
     { name: "Settings", href: "/admin/settings", icon: Settings },
     { name: "Hospital", href: "/admin/hospital", icon: Hospital },
-    { name: "Report", href: "/admin/report", icon:   NotepadText },
+    { name: "Report", href: "/admin/report", icon: NotepadText },
   ],
   staff: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
