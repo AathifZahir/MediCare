@@ -18,6 +18,7 @@ import AddReport from "../pages/admin/AddReport";
 import ReportHome from "../pages/admin/ReportHome";
 import EditReport from "../pages/admin/EditReport";
 import ViewReport from "../pages/client/ViewReport";
+import MyAppointments from "../pages/client/MyAppointments";
 
 const AppRoutes = () => {
   console.log("AppRoutes component rendered!");
@@ -29,6 +30,7 @@ const AppRoutes = () => {
         <Route path="/" element={<Home />} />
         <Route path="/appointments" element={<Appointment />} />
         <Route path="/Profile" element={<Profile />} />
+        <Route path="/MyAppointments" element={<MyAppointments />} />
 
         <Route path="/admin/register" element={<AdminRegister />} />
         <Route path="/admin/login" element={<AdminLogin />} />

@@ -3,9 +3,15 @@ import { useNavigate } from "react-router-dom";
 import auth from "../../firebase/auth"; // Import your Firebase auth configuration
 import db from "../../firebase/firestore"; // Import your Firestore configuration
 import { doc, getDoc, deleteDoc } from "firebase/firestore"; // Import Firestore methods
-import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePassword } from "firebase/auth"; // Import necessary methods
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  signOut,
+  updatePassword,
+} from "firebase/auth"; // Import necessary methods
 import UpdateProfile from "./UpdateProfile"; // Import the UpdateProfile component
 import HomeSidebar from "../../components/HomeSidebar";
+import ProfileSidebar from "../../components/ProfileSidebar";
 
 export default function UserProfile() {
   const [userData, setUserData] = useState({
@@ -39,13 +45,16 @@ export default function UserProfile() {
       try {
         const userDoc = doc(db, "users", user.uid);
         const userSnapshot = await getDoc(userDoc);
-        
+
         if (userSnapshot.exists()) {
           const userData = userSnapshot.data();
-          if (userData.role === "patient") { // Only proceed if the role is 'patient'
+          if (userData.role === "patient") {
+            // Only proceed if the role is 'patient'
             setUserData(userData);
           } else {
-            setError("Access denied: You do not have permission to view this profile.");
+            setError(
+              "Access denied: You do not have permission to view this profile."
+            );
           }
         } else {
           console.log("User data not found");
@@ -97,7 +106,10 @@ export default function UserProfile() {
       return;
     }
 
-    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    const credential = EmailAuthProvider.credential(
+      user.email,
+      currentPassword
+    );
 
     try {
       await reauthenticateWithCredential(user, credential);
@@ -133,11 +145,12 @@ export default function UserProfile() {
       <HomeSidebar />
       <div className="bg-gray-100 min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-lg w-full space-y-8 bg-white p-8 rounded-xl shadow-md">
+          <ProfileSidebar />
           <h2 className="text-center text-3xl font-extrabold text-gray-900">
             User Profile
           </h2>
           {error && <div className="text-red-600 text-center">{error}</div>}
-          
+
           {isEditing ? (
             <UpdateProfile
               userData={userData}
@@ -159,8 +172,12 @@ export default function UserProfile() {
               <p className="text-gray-900">First Name: {userData.firstName}</p>
               <p className="text-gray-900">Last Name: {userData.lastName}</p>
               <p className="text-gray-900">Email: {userData.email}</p>
-              <p className="text-gray-900">Phone Number: {userData.phoneNumber}</p>
-              <p className="text-gray-900">Date of Birth: {userData.dateOfBirth}</p>
+              <p className="text-gray-900">
+                Phone Number: {userData.phoneNumber}
+              </p>
+              <p className="text-gray-900">
+                Date of Birth: {userData.dateOfBirth}
+              </p>
               <p className="text-gray-900">Address: {userData.address}</p>
             </div>
           )}
@@ -177,7 +194,10 @@ export default function UserProfile() {
           ) : (
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
-                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="currentPassword"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Current Password
                 </label>
                 <input
@@ -190,7 +210,10 @@ export default function UserProfile() {
                 />
               </div>
               <div>
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="newPassword"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   New Password
                 </label>
                 <input
@@ -256,8 +279,8 @@ export default function UserProfile() {
               Logout
             </button>
           </div>
-            {/* Logout Confirmation Modal */}
-            {showLogoutConfirmation && (
+          {/* Logout Confirmation Modal */}
+          {showLogoutConfirmation && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
               <div className="bg-white rounded-lg p-6 w-1/3">
                 <h3 className="text-lg font-bold mb-4">Confirm Logout</h3>
