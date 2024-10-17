@@ -1,18 +1,15 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Firebase configuration using environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyA4fLAwnekULYYqdJznAk2Yoq5IKSj-XCY",
-  authDomain: "medicare-lk.firebaseapp.com",
-  projectId: "medicare-lk",
-  storageBucket: "medicare-lk.appspot.com",
-  messagingSenderId: "246049130186",
-  appId: "1:246049130186:web:5e189a6e3be822e8871633",
-  measurementId: "G-TN8DH02SDR",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase
