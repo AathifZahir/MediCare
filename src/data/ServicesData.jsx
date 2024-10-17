@@ -26,14 +26,6 @@ export const services = [
     paymentOptions: ["Credit Card", "Cash"],
   },
   {
-    id: 4,
-    name: "Prescription Medication",
-    description: "Get your medications prescribed by a doctor.",
-    fee: "Varies by medicine",
-    insurance: "Yes (for some medicines)",
-    paymentOptions: ["Credit Card", "Cash"],
-  },
-  {
     id: 5,
     name: "Doctor Appointment",
     description: "Schedule an appointment with a specialist doctor.",
