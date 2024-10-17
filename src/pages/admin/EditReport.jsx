@@ -224,21 +224,21 @@ export default function EditReport() {
     }
   };
 
-  // Handle report deletion
-  const handleDeleteReport = async () => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this report?");
-    if (!confirmDelete) return;
+// Handle report deletion
+const handleDeleteReport = async () => {
+  const confirmDelete = window.confirm("Are you sure you want to delete this report?");
+  if (!confirmDelete) return;
 
-    try {
-      await deleteDoc(doc(db, "reports", reportId)); // Use reportId for deletion
-      setSuccess(true);
-      navigate("/reports");
-    } catch (error) {
-      setError("Error deleting report. Please try again.");
-      console.error(error);
-    }
-  };
-
+  try {
+    await deleteDoc(doc(db, "reports", reportId)); // Use reportId for deletion
+    setSuccess(true); // Show success Snackbar
+    setError(""); // Clear any previous error
+    navigate("/admin/report");
+  } catch (error) {
+    setError("Error deleting report. Please try again.");
+    console.error(error);
+  }
+};
   return (
     <div className="flex min-h-screen bg-gray-100">
       <AdminSidebar />

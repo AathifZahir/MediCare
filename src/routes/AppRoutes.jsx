@@ -19,6 +19,7 @@ import ReportHome from "../pages/admin/ReportHome";
 import EditReport from "../pages/admin/EditReport";
 import ViewReport from "../pages/client/ViewReport";
 import MyAppointments from "../pages/client/MyAppointments";
+import ViewAdminReport from "../pages/admin/ViewAdminReport";
 
 const AppRoutes = () => {
   console.log("AppRoutes component rendered!");
@@ -96,6 +97,17 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+
+
+        <Route
+          path="/admin/reports/view/:customerId/:reportId" // reportId added here
+          element={
+            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+              <ViewAdminReport />
+            </ProtectedRoute>
+          }
+        />
+
 
         <Route path="/payment-gateway" element={<PaymentGateway />} />
 
