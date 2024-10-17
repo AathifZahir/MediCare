@@ -11,6 +11,8 @@ import {
   UserPlus,
   CalendarCheck,
   NotepadText,
+  Scan,
+  QrCode,
 } from "lucide-react";
 import getUserRole from "../utils/getUserRole"; // Import the getUserRole function
 import { CircularProgress, Box } from "@mui/material"; // Import CircularProgress from Material-UI
@@ -32,6 +34,7 @@ const navItems = {
     { name: "Settings", href: "/admin/settings", icon: Settings },
     { name: "Hospital", href: "/admin/hospital", icon: Hospital },
     { name: "Report", href: "/admin/report", icon: NotepadText },
+    { name: "Scan", href: "/admin/scan", icon: QrCode },
   ],
   staff: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -42,6 +45,7 @@ const navItems = {
       href: "/admin/appointments",
       icon: CalendarCheck,
     },
+    { name: "Scan", href: "/admin/scan", icon: QrCode },
   ],
   doctor: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -52,6 +56,7 @@ const navItems = {
       href: "/admin/appointments",
       icon: CalendarCheck,
     },
+    { name: "Scan", href: "/admin/scan", icon: QrCode },
   ],
 };
 
