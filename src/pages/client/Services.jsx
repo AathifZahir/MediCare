@@ -1,9 +1,7 @@
-// components/ServicesPage.jsx
-
 import React from "react";
 import ServiceCard from "../../components/ServiceCard";
 import { services } from "../../data/ServicesData"; // Adjust the import path if necessary
-import HomeSidebar from "../../components/HomeSidebar"; // Import HomeSidebar
+import HomeSidebar from "../../components/HomeNavbar"; // Import HomeSidebar
 
 const ServicesPage = () => {
   const handleBookNow = (serviceId) => {
@@ -12,11 +10,9 @@ const ServicesPage = () => {
   };
 
   return (
-    <div className="flex">
-      <HomeSidebar /> {/* Include HomeSidebar here */}
+    <div className="flex flex-col">
+      <HomeSidebar /> {/* HomeSidebar at the top */}
       <div className="p-6 flex-1">
-        {" "}
-        {/* Use flex-1 to fill the remaining space */}
         <h2 className="text-2xl font-bold mb-6">Our Services</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {services.map((service) => (

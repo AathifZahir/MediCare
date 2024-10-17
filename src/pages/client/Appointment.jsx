@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import HomeSidebar from "../../components/HomeSidebar";
+import HomeSidebar from "../../components/HomeNavbar";
 import db from "../../firebase/firestore";
 import {
   collection,

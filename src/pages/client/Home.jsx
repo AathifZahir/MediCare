@@ -8,7 +8,7 @@ import {
   FileText,
   Shield,
 } from "lucide-react";
-import HomeSidebar from "../../components/HomeSidebar"; // Adjust the path if necessary
+import HomeSidebar from "../../components/HomeNavbar"; // Adjust the path if necessary
 
 const features = [
   {

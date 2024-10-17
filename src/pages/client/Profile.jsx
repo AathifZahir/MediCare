@@ -10,7 +10,7 @@ import {
   updatePassword,
 } from "firebase/auth"; // Import necessary methods
 import UpdateProfile from "./UpdateProfile"; // Import the UpdateProfile component
-import HomeSidebar from "../../components/HomeSidebar";
+import HomeSidebar from "../../components/HomeNavbar";
 import ProfileSidebar from "../../components/ProfileSidebar";
 
 export default function UserProfile() {

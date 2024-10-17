@@ -10,7 +10,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import HomeSidebar from "../../components/HomeSidebar"; // Import HomeSidebar component
+import HomeSidebar from "../../components/HomeNavbar"; // Import HomeSidebar component
 import ProfileSidebar from "../../components/ProfileSidebar"; // Import ProfileSidebar component
 
 const MyAppointments = () => {
