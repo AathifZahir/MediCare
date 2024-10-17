@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Home, Calendar, Info, User, LogOut, LogIn , NotepadText} from "lucide-react";
+import {
+  Home,
+  Calendar,
+  Info,
+  User,
+  LogOut,
+  LogIn,
+  NotepadText,
+} from "lucide-react";
 import auth from "../firebase/auth"; // Import the auth object
 import { onAuthStateChanged, signOut } from "firebase/auth"; // Import necessary Firebase methods
 import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
@@ -48,7 +56,7 @@ const Header = () => {
             Home
           </a>
           <a
-            href="/appointments"
+            href="/services"
             className="flex items-center text-gray-700 hover:text-indigo-600"
           >
             <Calendar className="h-5 w-5 mr-1" />
