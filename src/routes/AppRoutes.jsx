@@ -1,25 +1,30 @@
 // src/AppRoutes.js
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
+//Patient
 import Register from "../pages/client/auth/Register";
 import Login from "../pages/client/auth/Login";
-import AdminRegister from "../pages/admin/auth/Register";
-import AdminLogin from "../pages/admin/auth/Login";
-import Dashboard from "../pages/admin/Dashboard";
 import PaymentGateway from "../pages/client/PaymentGateway";
-import Transactions from "../pages/admin/Transactions";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Home from "../pages/client/Home";
 import Appointment from "../pages/client/Appointment";
-import Hospital from "../pages/admin/Hospital";
 import Profile from "../pages/client/Profile";
+import ViewReport from "../pages/client/ViewReport";
+import MyAppointments from "../pages/client/MyAppointments";
+import ServicesPage from "../pages/client/Services";
+
+//Admin
+import AdminRegister from "../pages/admin/auth/Register";
+import AdminLogin from "../pages/admin/auth/Login";
+import Dashboard from "../pages/admin/Dashboard";
+import Transactions from "../pages/admin/Transactions";
+import ViewAdminReport from "../pages/admin/ViewAdminReport";
 import ViewProfile from "../pages/admin/ViewProfile";
 import AdminAppointment from "../pages/admin/AdminAppointment";
 import AddReport from "../pages/admin/AddReport";
 import ReportHome from "../pages/admin/ReportHome";
 import EditReport from "../pages/admin/EditReport";
-import ViewReport from "../pages/client/ViewReport";
-import MyAppointments from "../pages/client/MyAppointments";
-import ViewAdminReport from "../pages/admin/ViewAdminReport";
+import Hospital from "../pages/admin/Hospital";
 
 const AppRoutes = () => {
   console.log("AppRoutes component rendered!");
@@ -32,6 +37,7 @@ const AppRoutes = () => {
         <Route path="/appointments" element={<Appointment />} />
         <Route path="/Profile" element={<Profile />} />
         <Route path="/MyAppointments" element={<MyAppointments />} />
+        <Route path="/Services" element={<ServicesPage />} />
 
         <Route path="/admin/register" element={<AdminRegister />} />
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -98,7 +104,6 @@ const AppRoutes = () => {
           }
         />
 
-
         <Route
           path="/admin/reports/view/:customerId/:reportId" // reportId added here
           element={
@@ -107,7 +112,6 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-
 
         <Route path="/payment-gateway" element={<PaymentGateway />} />
 
