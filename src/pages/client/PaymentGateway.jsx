@@ -6,6 +6,7 @@ import auth from "../../firebase/auth"; // Import the auth instance from auth.js
 import { CreditCard, Shield } from "lucide-react"; // Adjust imports based on your usage
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
+import { services } from "../../data/ServicesData";
 
 // Create Alert component for Snackbar
 const Alert = React.forwardRef(function Alert(props, ref) {
@@ -17,31 +18,29 @@ const PaymentGateway = () => {
   const navigate = useNavigate(); // Initialize navigate
   const queryParams = new URLSearchParams(location.search); // Extract query params
 
-  const doctorId = queryParams.get("doctorId");
   const hospitalId = queryParams.get("hospitalId"); // Get hospitalId
-  const type = queryParams.get("type"); // Get type (e.g., "Consultation")
+  const time = queryParams.get("time"); // Get type (e.g., "Consultation")
   const date = queryParams.get("date"); // Get date
-  const time = queryParams.get("time"); // Get time
+  const serviceId = queryParams.get("serviceId"); // Get time
+
+  const getServiceFee = (serviceId) => {
+    const service = services.find(
+      (service) => service.id === parseInt(serviceId)
+    );
+    if (service) {
+      // Extract the number from the fee string (e.g., "LKR 1,500" -> 1500)
+      const fee = parseInt(service.fee.replace(/[^0-9]/g, ""), 10);
+      return fee || 0;
+    }
+    return 0;
+  };
 
   const [cardNumber, setCardNumber] = useState("");
   const [cvv, setCvv] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
 
-  const getAmount = (type) => {
-    switch (type) {
-      case "Checkup":
-        return "1200";
-      case "Consultation":
-        return "2500";
-      case "Surgery":
-        return "9500";
-      default:
-        return "0"; // Default amount for unknown types
-    }
-  };
-
   const [paymentType, setPaymentType] = useState("card");
-  const [amount, setAmount] = useState(getAmount(type)); // Set initial amount based on type
+  const [amount, setAmount] = useState(getServiceFee(serviceId)); // Set initial amount based on type
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -134,20 +133,18 @@ const PaymentGateway = () => {
     }
 
     try {
-      // Here, handle your payment processing logic.
-      const paymentSuccess = true; // Replace this with actual payment processing result
+      const paymentSuccess = true;
 
       if (paymentSuccess) {
         // Create the appointment data in Firestore
         const appointmentData = {
-          doctorId, // Store the doctor ID
-          hospitalId, // Add hospitalId from query params
-          type, // Use the type from query params
-          amount: Number(amount), // Set amount based on selected type
+          hospitalId,
+          amount: Number(amount),
+          serviceId,
           paymentType,
-          date, // Add date from query params
-          time, // Add time from query params
-          userId, // Add the logged-in user ID
+          date,
+          time,
+          userId,
           userName: `${userName.firstName} ${userName.lastName}`, // Add user's name
           timestamp: new Date(),
         };
@@ -171,7 +168,7 @@ const PaymentGateway = () => {
           appointmentId,
           amount: Number(amount),
           paymentType,
-          userId, // Add the logged-in user ID to transaction data
+          userId,
           userName: `${userName.firstName} ${userName.lastName}`, // Add user's name
           timestamp: new Date(),
         };
@@ -180,11 +177,13 @@ const PaymentGateway = () => {
         if (paymentType === "card") {
           transactionData.cardNumber =
             document.getElementById("cardNumber").value;
+          transactionData.status = "Paid";
         } else if (paymentType === "insurance") {
           transactionData.policyNumber =
             document.getElementById("policyNumber").value;
           transactionData.providerName =
             document.getElementById("providerName").value;
+          transactionData.status = "Pending";
         }
 
         // Store the transaction in the transactions collection and get its ID
@@ -207,7 +206,7 @@ const PaymentGateway = () => {
 
         // Navigate to home page after displaying the message
         setTimeout(() => {
-          navigate("/"); // Navigate to the home page after a delay
+          navigate("/");
         }, 2000); // 2 seconds delay
       } else {
         setError("Payment processing failed. Please try again.");
@@ -343,7 +342,7 @@ const PaymentGateway = () => {
         <button
           type="submit"
           className="w-full p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-          disabled={loading} // Disable button during loading
+          disabled={loading}
         >
           {loading ? "Processing..." : `Pay Now LKR ${amount}`}
         </button>
