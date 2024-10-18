@@ -15,10 +15,11 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
       try {
         const hospitalsCollection = collection(db, "hospitals");
         const hospitalSnapshot = await getDocs(hospitalsCollection);
-        const hospitalNames = hospitalSnapshot.docs.map(
-          (doc) => doc.data().name
-        ); // Assuming the field is named 'name'
-        setHospitals(hospitalNames);
+        const hospitalData = hospitalSnapshot.docs.map((doc) => ({
+          id: doc.id, // Get the document ID
+          name: doc.data().name, // Get the hospital name
+        }));
+        setHospitals(hospitalData);
       } catch (error) {
         console.error("Error retrieving hospital names: ", error);
       }
@@ -46,11 +47,29 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
     e.preventDefault();
     setError("");
 
-    // Validation logic here...
+    // Validate that the date is not today or before
+    const selectedDate = new Date(date);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
+    if (selectedDate < tomorrow) {
+      setError("Please select a date that is tomorrow or later.");
+      return;
+    }
+
+    // Construct the URL for the payment gateway
+    const hospitalId = selectedHospital.id; // Assuming selectedHospital is the hospital ID
+    const serviceId = service.id; // Assuming service has an id field
+    const paymentUrl = `/payment-gateway?hospitalId=${hospitalId}&date=${date}&time=${time}&serviceId=${serviceId}`;
+
+    // Redirect to the payment gateway
+    window.location.href = paymentUrl;
+
+    // Optionally, you can log the appointment creation for debugging
     console.log(
       `Appointment created for service: ${service.name} at ${selectedHospital} on ${date} at ${time}`
     );
+
     onClose(); // Close the modal after submission
   };
 
@@ -92,17 +111,22 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
             </label>
             <select
               id="hospital"
-              value={selectedHospital}
-              onChange={(e) => setSelectedHospital(e.target.value)}
+              value={selectedHospital.id || ""}
+              onChange={(e) => {
+                const selected = hospitals.find(
+                  (hospital) => hospital.id === e.target.value
+                );
+                setSelectedHospital(selected);
+              }}
               required
               className="py-2 px-4 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="" disabled>
                 Select a hospital
               </option>
-              {hospitals.map((hospital, index) => (
-                <option key={index} value={hospital}>
-                  {hospital}
+              {hospitals.map((hospital) => (
+                <option key={hospital.id} value={hospital.id}>
+                  {hospital.name}
                 </option>
               ))}
             </select>
