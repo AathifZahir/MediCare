@@ -31,7 +31,7 @@ const navItems = {
       icon: CalendarCheck,
     },
     { name: "Patients", href: "/admin/viewprofile", icon: Users },
-    { name: "Settings", href: "/admin/settings", icon: Settings },
+
     { name: "Hospital", href: "/admin/hospital", icon: Hospital },
     { name: "Report", href: "/admin/report", icon: NotepadText },
     { name: "Scan", href: "/admin/scan", icon: QrCode },
@@ -39,7 +39,7 @@ const navItems = {
   staff: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Transactions", href: "/admin/transactions", icon: HandCoins },
-    { name: "Settings", href: "/admin/settings", icon: Settings },
+
     {
       name: "Appointment",
       href: "/admin/appointments",
@@ -50,7 +50,7 @@ const navItems = {
   doctor: [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Transactions", href: "/admin/transactions", icon: HandCoins },
-    { name: "Settings", href: "/admin/settings", icon: Settings },
+
     {
       name: "Appointment",
       href: "/admin/appointments",
@@ -164,18 +164,6 @@ export default function AdminSidebar() {
         </button>
         {isProfileOpen && (
           <div className="mt-3 py-2 bg-gray-700 rounded-md">
-            <a
-              href="/admin/profile"
-              className="block px-4 py-2 text-sm hover:bg-gray-600"
-            >
-              Profile
-            </a>
-            <a
-              href="/admin/settings"
-              className="block px-4 py-2 text-sm hover:bg-gray-600"
-            >
-              Settings
-            </a>
             <button
               onClick={handleLogout}
               className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-600 flex items-center"
