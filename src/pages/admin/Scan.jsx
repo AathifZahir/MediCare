@@ -6,14 +6,14 @@ import Sidebar from "../../components/AdminSidebar";
 import { QrCode, X, FileText } from "lucide-react";
 
 export default function Scan() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [reportDetails, setReportDetails] = useState(null);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [loadingReport, setLoadingReport] = useState(false);
+  const [user, setUser] = useState(null); // Holds user details after scanning
+  const [loading, setLoading] = useState(false); // Controls loading state during scan
+  const [error, setError] = useState(""); // Holds any error messages
+  const [isModalOpen, setIsModalOpen] = useState(false); // Toggles patient details modal
+  const [successMessage, setSuccessMessage] = useState(""); // Stores success message on scan
+  const [reportDetails, setReportDetails] = useState(null); // Stores fetched report data
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false); // Toggles report modal
+  const [loadingReport, setLoadingReport] = useState(false); // Controls loading state during report fetch
 
   const handleScan = async () => {
     setLoading(true);
@@ -21,9 +21,9 @@ export default function Scan() {
     setSuccessMessage("");
 
     try {
-      const patientId = "hdfjayMStOY3BRZZYuF3LbPMKcl1"; // Replace with dynamic patient ID from QR code
-      const docRef = doc(db, "users", patientId);
-      const docSnap = await getDoc(docRef);
+      const patientId = "hdfjayMStOY3BRZZYuF3LbPMKcl1"; // Hardcoded patient ID, replace with scanned data
+      const docRef = doc(db, "users", patientId); 
+      const docSnap = await getDoc(docRef); // Retrieve the user document from Firestore
 
       if (docSnap.exists()) {
         setUser({
@@ -31,7 +31,7 @@ export default function Scan() {
           ...docSnap.data(),
         });
         setSuccessMessage("Successfully Scanned!");
-        setIsModalOpen(true);
+        setIsModalOpen(true); // Open modal to display user details
       } else {
         setError("No patient found with the specified ID.");
       }
@@ -49,13 +49,13 @@ export default function Scan() {
     setReportDetails(null);
 
     try {
-      const q = query(collection(db, "reports"), where("patientId", "==", user.id));
+      const q = query(collection(db, "reports"), where("patientId", "==", user.id)); // Query reports by patient ID
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        const reportData = querySnapshot.docs[0].data();
+        const reportData = querySnapshot.docs[0].data(); // Extract report details from the first match
         setReportDetails(reportData);
-        setIsReportModalOpen(true);
+        setIsReportModalOpen(true); // Open modal to display report details
       } else {
         setError("No reports found for this patient.");
       }
@@ -69,16 +69,16 @@ export default function Scan() {
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setUser(null);
+    setUser(null); // Reset user data on modal close
   };
 
   const closeReportModal = () => {
     setIsReportModalOpen(false);
-    setReportDetails(null);
+    setReportDetails(null); // Reset report data on modal close
   };
 
   const handleViewReportDetails = () => {
-    handleViewReport();
+    handleViewReport(); // Fetch and display report when button is clicked
   };
 
   return (
@@ -129,7 +129,6 @@ export default function Scan() {
             </Button>
           )}
 
-          {/* Modal for displaying patient details */}
           <Modal
             open={isModalOpen}
             onClose={closeModal}
@@ -187,7 +186,6 @@ export default function Scan() {
             </Box>
           </Modal>
 
-          {/* Modal for displaying report details */}
           <Modal
             open={isReportModalOpen}
             onClose={closeReportModal}
@@ -211,7 +209,14 @@ export default function Scan() {
                     { label: "Report Category", value: reportDetails.reportCategory },
                     { label: "Test Date", value: reportDetails.testDate },
                     { label: "Doctor's Comments", value: reportDetails.doctorComments },
-                    { label: "Report File", value: reportDetails.reportURL ? <a href={reportDetails.reportURL} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Download Report</a> : "N/A" },
+                    {
+                      label: "Report File",
+                      value: reportDetails.reportURL ? (
+                        <a href={reportDetails.reportURL} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                          Download Report
+                        </a>
+                      ) : "N/A",
+                    },
                   ].map((item, index) => (
                     <div key={index} className="flex border-b border-gray-200 pb-2">
                       <Typography className="font-semibold w-1/3 text-gray-600">{item.label}:</Typography>
@@ -220,14 +225,14 @@ export default function Scan() {
                   ))}
                 </div>
               ) : (
-                loadingReport ? <CircularProgress /> : <Typography>No report details available.</Typography>
+                <CircularProgress className="text-green-600" />
               )}
               <Button
                 onClick={closeReportModal}
                 variant="outlined"
                 color="primary"
                 fullWidth
-                className="mt-4 py-3 rounded-full transition-all duration-300 border-green-600 text-green-600 hover:bg-green-50 shadow-md hover:shadow-lg font-semibold"
+                className="py-3 rounded-full transition-all duration-300 border-green-600 text-green-600 hover:bg-green-50 shadow-md hover:shadow-lg font-semibold"
               >
                 Close
               </Button>

@@ -1,3 +1,5 @@
+// Import necessary modules and dependencies
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -12,19 +14,23 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
+
+// Firebase configuration imports
 import auth from "../../firebase/auth.jsx";
 import storage from "../../firebase/storage";
 import db from "../../firebase/firestore.jsx";
+// UI components from MUI and custom components
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import AdminSidebar from "../../components/AdminSidebar";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 export default function EditReport() {
-  const { customerId } = useParams(); // Fetch customerId from URL params
+  // Get the patient/customer ID from the URL parameters
+  const { customerId } = useParams(); 
   const navigate = useNavigate();
 
-  // State management
+// State variables for managing various aspects of the component
   const [currentUser, setCurrentUser] = useState(null);
   const [doctors, setDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
@@ -43,7 +49,7 @@ export default function EditReport() {
   const [existingReportURL, setExistingReportURL] = useState(null);
   const [reportId, setReportId] = useState(null); // New state for reportId
 
-  // Authentication check
+  // Authentication check on component mount
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -56,7 +62,7 @@ export default function EditReport() {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Fetch patient data
+  // Fetch patient information
   useEffect(() => {
     const fetchPatientData = async () => {
       try {
@@ -80,7 +86,8 @@ export default function EditReport() {
     fetchPatientData();
   }, [customerId]);
 
-  // Fetch doctors
+
+  // Fetch list of doctors from the database
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
@@ -106,7 +113,7 @@ export default function EditReport() {
     fetchDoctors();
   }, []);
 
-  // Fetch report data
+ // Fetch existing report data for the selected patient
   useEffect(() => {
     const fetchReportData = async () => {
       try {
@@ -160,21 +167,21 @@ export default function EditReport() {
     }
   };
 
-  // Close snackbar
+   // Close Snackbar notification
   const handleCloseSnackbar = (event, reason) => {
     if (reason === "clickaway") return;
     setSuccess(false);
     setError("");
   };
 
-  // Upload file and return download URL
+ // Upload the report file to Firebase storage and return the download URL
   const uploadFileAndUpdateReport = async () => {
     const storageRef = ref(storage, `reports/${customerId}/${reportFile.name}`);
     await uploadBytes(storageRef, reportFile);
     return getDownloadURL(storageRef);
   };
 
-  // Handle form submission
+   // Handle form submission to update the report
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (

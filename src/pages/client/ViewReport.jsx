@@ -13,7 +13,7 @@ export default function ViewReport() {
 
   useEffect(() => {
     const auth = getAuth();
-
+   
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {

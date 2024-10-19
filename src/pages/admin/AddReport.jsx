@@ -1,3 +1,4 @@
+// Import necessary dependencies and Firebase services
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -12,6 +13,8 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
+
+// Import components and Firebase instances
 import AdminSidebar from "../../components/AdminSidebar";
 import auth from "../../firebase/auth.jsx";
 import storage from "../../firebase/storage";
@@ -20,9 +23,11 @@ import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 
 const AddReport = () => {
-  const { customerId, reportId } = useParams(); // Get reportId from URL params
+  // Extract customerId and reportId from URL parameters
+  const { customerId, reportId } = useParams(); 
   const navigate = useNavigate();
 
+  // State management for user, doctors, form inputs, and feedback
   const [currentUser, setCurrentUser] = useState(null);
   const [doctors, setDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
@@ -37,33 +42,36 @@ const AddReport = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
+    // Monitor authentication state and ensure the user has proper access
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser(user);
         const userDoc = await getDoc(doc(db, "users", user.uid));
         const userData = userDoc.data();
-        // Check if the current user is authorized to add reports
+         // Only allow access if the user is an admin, staff, or doctor
         if (!["admin", "staff", "doctor"].includes(userData.role)) {
           alert("Unauthorized access. Redirecting to login.");
           navigate("/login");
         }
       } else {
+         // Redirect if not authenticated
         alert("Please log in to access this page.");
         navigate("/login");
       }
     });
 
-    return () => unsubscribe();
+    return () => unsubscribe(); // Cleanup listener on component unmount
   }, [navigate]);
 
-  // Fetch patient data based on customerId
+   // Fetch patient data based on customerId from Firestore
   useEffect(() => {
     const fetchPatientData = async () => {
       try {
         const patientDoc = await getDoc(doc(db, "users", customerId));
         if (patientDoc.exists()) {
           const patientData = patientDoc.data();
+            // Set patient name for display
           setPatientName(`${patientData.firstName} ${patientData.lastName}`);
         } else {
           setError("Patient not found.");
@@ -76,11 +84,11 @@ const AddReport = () => {
     fetchPatientData();
   }, [customerId]);
 
-  // Fetch doctors data
+  // Fetch list of doctors from Firestore
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        setLoadingDoctors(true);
+        setLoadingDoctors(true); // Start loading indicator
         const q = query(collection(db, "users"), where("role", "==", "doctor"));
         const doctorSnapshot = await getDocs(q);
 
@@ -93,18 +101,18 @@ const AddReport = () => {
           ...doc.data(),
         }));
 
-        setDoctors(doctorList);
+        setDoctors(doctorList);  // Update doctors list in state
       } catch (error) {
         setError("Error fetching doctors. Please try again later.");
       } finally {
-        setLoadingDoctors(false);
+        setLoadingDoctors(false);  // Stop loading indicator
       }
     };
 
     fetchDoctors();
   }, []);
 
-  // Fetch report data for editing if reportId exists
+    // If editing a report, fetch existing report data to pre-fill the form
   useEffect(() => {
     const fetchReportData = async () => {
       if (reportId) {
@@ -112,7 +120,7 @@ const AddReport = () => {
           const reportDoc = await getDoc(doc(db, "reports", reportId));
           if (reportDoc.exists()) {
             const reportData = reportDoc.data();
-            // Populate the fields with report data
+              // Populate form fields with the fetched report data
             setSelectedDoctor(reportData.doctorId);
             setReportType(reportData.reportType);
             setReportCategory(reportData.reportCategory);
@@ -130,10 +138,12 @@ const AddReport = () => {
     fetchReportData();
   }, [reportId]);
 
+  // Handle file input validation and store the selected file in state
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
       const validTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+       // Validate file type
       if (!validTypes.includes(file.type)) {
         setError("Invalid file type. Only PDF and DOCX are allowed.");
         return;
@@ -146,12 +156,14 @@ const AddReport = () => {
     }
   };
 
+    // Close the Snackbar notification
   const handleCloseSnackbar = (event, reason) => {
     if (reason === "clickaway") return;
     setSuccess(false);
     setError("");
   };
 
+    // Reset form fields to their initial state
   const resetForm = () => {
     setSelectedDoctor("");
     setReportType("");
@@ -161,6 +173,8 @@ const AddReport = () => {
     setReportFile(null);
   };
 
+
+  // Upload the file to Firebase Storage and get its download URL
   const uploadFileAndAddReport = async () => {
     const storageRef = ref(storage, `reports/${customerId}/${reportFile.name}`);
     await uploadBytes(storageRef, reportFile);
