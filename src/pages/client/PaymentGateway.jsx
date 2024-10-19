@@ -153,7 +153,7 @@ const PaymentGateway = () => {
         if (paymentType === "card") {
           appointmentData.status = "scheduled";
         } else if (paymentType === "insurance") {
-          appointmentData.status = "pending";
+          appointmentData.status = "under review";
         }
 
         // Create the appointment document in Firestore and get its ID

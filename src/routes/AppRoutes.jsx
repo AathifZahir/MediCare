@@ -1,13 +1,14 @@
 // src/AppRoutes.js
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
+//ProtectedRoute
+import ProtectedRoute from "../components/ProtectedRoute";
+
 //Patient
 import Register from "../pages/client/auth/Register";
 import Login from "../pages/client/auth/Login";
 import PaymentGateway from "../pages/client/PaymentGateway";
-import ProtectedRoute from "../components/ProtectedRoute";
 import Home from "../pages/client/Home";
-import Appointment from "../pages/client/Appointment";
 import Profile from "../pages/client/Profile";
 import ViewReport from "../pages/client/ViewReport";
 import MyAppointments from "../pages/client/MyAppointments";
@@ -32,22 +33,58 @@ const AppRoutes = () => {
   return (
     <Router>
       <Routes>
+        {/* Patient routes */}
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Home />} />
-        <Route path="/appointments" element={<Appointment />} />
-        <Route path="/Profile" element={<Profile />} />
-        <Route path="/MyAppointments" element={<MyAppointments />} />
+        <Route
+          path="/Profile"
+          element={
+            <ProtectedRoute allowedRoles={["patient"]} loginRedirect="/login">
+              <Profile />{" "}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/MyAppointments"
+          element={
+            <ProtectedRoute allowedRoles={["patient"]} loginRedirect="/login">
+              <MyAppointments />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/Services" element={<ServicesPage />} />
+        <Route
+          path="/payment-gateway"
+          element={
+            <ProtectedRoute allowedRoles={["patient"]} loginRedirect="/login">
+              <PaymentGateway />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/ViewReport" element={<ViewReport />} />
 
+        {/* Admin routes */}
         <Route path="/admin/register" element={<AdminRegister />} />
         <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/ViewProfile" element={<ViewProfile />} />
-
+        <Route
+          path="/admin/ViewProfile"
+          element={
+            <ProtectedRoute
+              allowedRoles={["admin", "staff", "doctor"]}
+              loginRedirect="/admin/login"
+            >
+              <ViewProfile />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/admin/dashboard"
           element={
-            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+            <ProtectedRoute
+              allowedRoles={["admin", "staff", "doctor"]}
+              loginRedirect="/admin/login"
+            >
               <Dashboard />
             </ProtectedRoute>
           }
@@ -55,7 +92,10 @@ const AppRoutes = () => {
         <Route
           path="/admin/transactions"
           element={
-            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+            <ProtectedRoute
+              allowedRoles={["admin", "staff", "doctor"]}
+              loginRedirect="/admin/login"
+            >
               <Transactions />
             </ProtectedRoute>
           }
@@ -63,69 +103,80 @@ const AppRoutes = () => {
         <Route
           path="/admin/hospital"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute
+              allowedRoles={["admin"]}
+              loginRedirect="/admin/login"
+            >
               <Hospital />
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/admin/appointments"
           element={
-            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+            <ProtectedRoute
+              allowedRoles={["admin", "staff", "doctor"]}
+              loginRedirect="/admin/login"
+            >
               <AdminAppointment />
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/admin/reports/add/:customerId" // Updated to include :customerId as a route parameter
           element={
-            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+            <ProtectedRoute
+              allowedRoles={["admin", "staff", "doctor"]}
+              loginRedirect="/admin/login"
+            >
               <AddReport />
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/admin/reports/edit/:customerId/:reportId" // reportId added here
           element={
-            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+            <ProtectedRoute
+              allowedRoles={["admin", "staff", "doctor"]}
+              loginRedirect="/admin/login"
+            >
               <EditReport />
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/admin/report" // reportId added here
           element={
-            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+            <ProtectedRoute
+              allowedRoles={["admin", "staff", "doctor"]}
+              loginRedirect="/admin/login"
+            >
               <ReportHome />
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/admin/reports/view/:customerId/:reportId" // reportId added here
           element={
-            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+            <ProtectedRoute
+              allowedRoles={["admin", "staff", "doctor"]}
+              loginRedirect="/admin/login"
+            >
               <ViewAdminReport />
             </ProtectedRoute>
           }
         />
-        
         <Route
           path="/admin/scan" // reportId added here
           element={
-            <ProtectedRoute allowedRoles={["admin", "staff", "doctor"]}>
+            <ProtectedRoute
+              allowedRoles={["admin", "staff", "doctor"]}
+              loginRedirect="/admin/login"
+            >
               <Scan />
             </ProtectedRoute>
           }
         />
-
-        <Route path="/payment-gateway" element={<PaymentGateway />} />
-
-        <Route path="/ViewReport" element={<ViewReport />} />
       </Routes>
     </Router>
   );
