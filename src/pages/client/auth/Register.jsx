@@ -8,6 +8,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Import S
 import storage from "../../../firebase/storage"; // Corrected import statement
 
 export default function SignUp() {
+  // State for input fields
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -15,41 +16,41 @@ export default function SignUp() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
-  const [profilePicture, setProfilePicture] = useState(null);
-  const [error, setError] = useState("");
+  const [profilePicture, setProfilePicture] = useState(null);// State for storing the uploaded profile picture
+  const [error, setError] = useState("");// State for error messages
 
-  const navigate = useNavigate();
-
+  const navigate = useNavigate();// Hook for programmatically navigating between pages
+// Handle file input for profile picture
   const handleFileChange = (e) => {
     if (e.target.files[0]) {
       setProfilePicture(e.target.files[0]);
     }
   };
-
+// Validate form inputs before submission
   const validateForm = () => {
-    // Validation logic
+    // Ensure all required fields are filled
     if (!firstName || !lastName || !email || !password || !phoneNumber || !address || !dateOfBirth) {
       setError("All fields are required.");
       return false;
     }
-
+ // Validate email format using a regex pattern
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(email)) {
       setError("Please enter a valid email address.");
       return false;
     }
-
+// Validate password complexity (minimum 8 characters, contains number, lowercase, and uppercase)
     if (password.length < 8 || !/\d/.test(password) || !/[a-z]/.test(password) || !/[A-Z]/.test(password)) {
       setError("Password must be at least 8 characters long and contain at least one number, one lowercase letter, and one uppercase letter.");
       return false;
     }
-
+ // Validate phone number format (10 digits)
     const phonePattern = /^[0-9]{10}$/;
     if (!phonePattern.test(phoneNumber)) {
       setError("Phone number must be 10 digits.");
       return false;
     }
-
+ // Validate date of birth (cannot be in the future)
     const today = new Date();
     const dob = new Date(dateOfBirth);
     if (dob > today) {
@@ -57,26 +58,27 @@ export default function SignUp() {
       return false;
     }
 
-    setError("");
+    setError("");// Clear error message if validation passes
     return true;
   };
-
+// Handle form submission
   const handleSubmit = async (event) => {
-    event.preventDefault();
+    event.preventDefault();// Prevent page reload on form submission
 
-    if (!validateForm()) return;
+    if (!validateForm()) return;// Stop submission if form validation fails
 
     try {
+       // Register user with Firebase authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
+      const user = userCredential.user;// Get the registered user
+ // Upload profile picture to Firebase storage (if available)
       let profilePictureUrl = "";
       if (profilePicture) {
         const profilePictureRef = ref(storage, `profile_pictures/${user.uid}`);
         await uploadBytes(profilePictureRef, profilePicture);
         profilePictureUrl = await getDownloadURL(profilePictureRef);
       }
-
+// Save user details to Firestore database
       await setDoc(doc(db, "users", user.uid), {
         firstName,
         lastName,
@@ -89,7 +91,7 @@ export default function SignUp() {
       });
 
       console.log("User registered and data saved:", user);
-      navigate("/login");
+      navigate("/login");// Redirect the user to the login page after successful registration
     } catch (error) {
       console.error("Error registering user:", error);
       setError("Error registering user: " + error.message);
