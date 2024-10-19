@@ -118,41 +118,34 @@ const Dashboard = () => {
 
   // Generate PDF for the chart
   const generatePdf = async (chartRef, title, summary) => {
-    // Check if the chartRef is assigned and attached to the document
-    if (!chartRef.current || !(chartRef.current instanceof HTMLElement)) {
-      console.error(
-        "Chart element is not a valid HTMLElement or not attached."
-      );
+    // Ensure the chart is rendered before proceeding
+    if (!chartRef.current || !chartRef.current.canvas) {
+      console.error("Chart is not yet rendered or attached to DOM.");
       return;
     }
 
-    console.log("Chart reference is valid:", chartRef.current); // Debugging
+    try {
+      const canvas = await html2canvas(chartRef.current.canvas, {
+        useCORS: true,
+      });
+      const imgData = canvas.toDataURL("image/png");
 
-    // Use requestAnimationFrame to ensure rendering is complete
-    requestAnimationFrame(async () => {
-      try {
-        const canvas = await html2canvas(chartRef.current, {
-          useCORS: true,
-        });
-        const imgData = canvas.toDataURL("image/png");
+      // Create a new jsPDF document
+      const pdf = new jsPDF();
+      pdf.setFontSize(18);
+      pdf.text(title, 10, 10);
 
-        // Create a new jsPDF document
-        const pdf = new jsPDF();
-        pdf.setFontSize(18);
-        pdf.text(title, 10, 10);
+      pdf.setFontSize(12);
+      pdf.text(summary, 10, 20);
 
-        pdf.setFontSize(12);
-        pdf.text(summary, 10, 20);
+      // Add the chart image to the PDF
+      pdf.addImage(imgData, "PNG", 10, 40, 180, 100); // Adjust the size and position
 
-        // Add the chart image to the PDF
-        pdf.addImage(imgData, "PNG", 10, 40, 180, 100); // Adjust the size and position
-
-        // Save the PDF
-        pdf.save(`${title}.pdf`);
-      } catch (error) {
-        console.error("Error generating PDF:", error);
-      }
-    });
+      // Save the PDF
+      pdf.save(`${title}.pdf`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    }
   };
 
   const appointmentSummary =
