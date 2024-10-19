@@ -142,7 +142,7 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
               onChange={(e) => setDate(e.target.value)}
               min={tomorrowString}
               required
-              className="py-2 px-4 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring -blue-500 focus:border-blue-500"
+              className="py-2 px-4 border border-gray-300 rounded-md shadow-sm focus:ring -blue-500 focus:border-blue-500"
             />
           </div>
           <div className="flex flex-col space-y-2">
