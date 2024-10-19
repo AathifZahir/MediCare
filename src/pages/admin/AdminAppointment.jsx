@@ -48,8 +48,9 @@ const AdminAppointment = () => {
         );
 
         // Filter appointments based on user role
-        if (userRole === "admin") {
+        if (userRole.role === "admin") {
           setAppointments(appointmentList);
+          console.log(appointmentList);
         } else {
           const filteredAppointments = appointmentList.filter(
             (appointment) => appointment.hospitalId === userRole.hospitalId
