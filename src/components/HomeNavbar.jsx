@@ -46,7 +46,8 @@ const Header = () => {
   return (
     <header className="bg-white shadow-md">
       <div className="mx-auto max-w-7xl px-4 py-4 flex justify-between items-center">
-        <h1 className="text-lg font-semibold text-gray-800">MediCare</h1>
+        <img src="/fulllogo.svg" class=" h-12" alt="Full Logo"></img>
+
         <nav className="flex-grow flex justify-center space-x-8">
           <a
             href="/"
