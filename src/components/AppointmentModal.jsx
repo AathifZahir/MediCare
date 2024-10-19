@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import db from "../firebase/firestore"; // Adjust the import path as necessary
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { X } from "lucide-react"; // Importing the cancel icon
 
 const AppointmentModal = ({ isOpen, onClose, service }) => {
@@ -9,6 +9,8 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
   const [error, setError] = useState("");
   const [hospitals, setHospitals] = useState([]);
   const [selectedHospital, setSelectedHospital] = useState("");
+  const [bookedAppointments, setBookedAppointments] = useState([]);
+  const [disabledDates, setDisabledDates] = useState([]);
 
   useEffect(() => {
     const fetchHospitals = async () => {
@@ -30,6 +32,46 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      if (!selectedHospital) return;
+      try {
+        const appointmentsCollection = collection(db, "appointments");
+        const q = query(appointmentsCollection, where("hospitalId", "==", selectedHospital.id));
+        const appointmentSnapshot = await getDocs(q);
+        const appointmentData = appointmentSnapshot.docs.map((doc) => ({
+          date: doc.data().date,
+          time: doc.data().time,
+        }));
+
+        setBookedAppointments(appointmentData);
+
+        // Collect dates that are fully booked (all time slots taken)
+        const fullyBookedDates = new Set();
+        const slotCount = generateTimeSlots().length;
+        const dateMap = {};
+
+        appointmentData.forEach((appointment) => {
+          if (!dateMap[appointment.date]) {
+            dateMap[appointment.date] = 0;
+          }
+          dateMap[appointment.date]++;
+          if (dateMap[appointment.date] >= slotCount) {
+            fullyBookedDates.add(appointment.date);
+          }
+        });
+
+        setDisabledDates(Array.from(fullyBookedDates));
+      } catch (error) {
+        console.error("Error retrieving appointments: ", error);
+      }
+    };
+
+    if (selectedHospital) {
+      fetchAppointments();
+    }
+  }, [selectedHospital]);
+
   if (!isOpen) return null;
 
   const generateTimeSlots = () => {
@@ -41,13 +83,18 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
     return slots;
   };
 
+  const isTimeSlotBooked = (slot) => {
+    return bookedAppointments.some(
+      (appointment) => appointment.date === date && appointment.time === slot
+    );
+  };
+
   const timeSlots = generateTimeSlots();
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError("");
 
-    // Validate that the date is not today or before
     const selectedDate = new Date(date);
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -57,20 +104,16 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
       return;
     }
 
-    // Construct the URL for the payment gateway
-    const hospitalId = selectedHospital.id; // Assuming selectedHospital is the hospital ID
-    const serviceId = service.id; // Assuming service has an id field
+    const hospitalId = selectedHospital.id;
+    const serviceId = service.id;
     const paymentUrl = `/payment-gateway?hospitalId=${hospitalId}&date=${date}&time=${time}&serviceId=${serviceId}`;
 
-    // Redirect to the payment gateway
     window.location.href = paymentUrl;
-
-    // Optionally, you can log the appointment creation for debugging
     console.log(
-      `Appointment created for service: ${service.name} at ${selectedHospital} on ${date} at ${time}`
+      `Appointment created for service: ${service.name} at ${selectedHospital.name} on ${date} at ${time}`
     );
 
-    onClose(); // Close the modal after submission
+    onClose();
   };
 
   const handleCancel = () => {
@@ -78,7 +121,7 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
     setTime("");
     setSelectedHospital("");
     setError("");
-    onClose(); // Close the modal on cancel
+    onClose();
   };
 
   const tomorrow = new Date();
@@ -88,7 +131,6 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
-        {/* Cancel icon in the top corner */}
         <button
           onClick={handleCancel}
           className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
@@ -141,6 +183,7 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
               value={date}
               onChange={(e) => setDate(e.target.value)}
               min={tomorrowString}
+              disabled={disabledDates.includes(date)}
               required
               className="py-2 px-4 border border-gray-300 rounded-md shadow-sm focus:ring -blue-500 focus:border-blue-500"
             />
@@ -160,7 +203,7 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
                 Select a time slot
               </option>
               {timeSlots.map((slot, index) => (
-                <option key={index} value={slot}>
+                <option key={index} value={slot} disabled={isTimeSlotBooked(slot)}>
                   {slot}
                 </option>
               ))}
