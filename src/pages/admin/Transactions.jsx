@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-} from "@mui/material";
+import { CircularProgress } from "@mui/material";
 import { CreditCard, Shield, Banknote, X } from "lucide-react";
 import AdminSidebar from "../../components/AdminSidebar";
 import db from "../../firebase/firestore";
@@ -16,6 +9,7 @@ import {
   updateDoc,
   doc,
   addDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import getUserRoleAndHospital from "../../utils/getUserRoleAndHospital";
 
@@ -26,19 +20,11 @@ const Transactions = () => {
   const [loading, setLoading] = useState(true);
   const [confirmStatusDialogOpen, setConfirmStatusDialogOpen] = useState(false);
   const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
-  const [addTransactionModalOpen, setAddTransactionModalOpen] = useState(false);
-  const [newTransaction, setNewTransaction] = useState({
-    fullName: "",
-    paymentType: "card",
-    amount: "",
-    userId: "",
-    appointmentId: "",
-  });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { role, hospitalId } = await getUserRoleAndHospital(); // Fetch user role and hospital ID
+        const { role, hospitalId } = await getUserRoleAndHospital();
 
         // Fetch transactions
         const transactionsCollection = collection(db, "transactions");
@@ -48,50 +34,15 @@ const Transactions = () => {
           ...doc.data(),
         }));
 
-        console.log("Transactions fetched:", transactionList);
-
         // Filter transactions based on user role
         const filteredTransactions =
           role === "admin"
-            ? transactionList // Admin sees all transactions
+            ? transactionList
             : transactionList.filter(
                 (transaction) => transaction.hospitalId === hospitalId
-              ); // Filter by hospitalId for doctor/staff
+              );
 
-        console.log("Filtered Transactions:", filteredTransactions);
-
-        // Fetch users
-        const usersCollection = collection(db, "users");
-        const usersSnapshot = await getDocs(usersCollection);
-        const usersData = {};
-        usersSnapshot.forEach((doc) => {
-          const user = doc.data();
-          usersData[doc.id] = `${user.firstName} ${user.lastName}`; // Use document ID as the key
-        });
-
-        console.log("Users fetched:", usersData);
-
-        // Fetch appointments
-        const appointmentsCollection = collection(db, "appointments");
-        const appointmentsSnapshot = await getDocs(appointmentsCollection);
-        const appointmentsData = {};
-        appointmentsSnapshot.forEach((doc) => {
-          const appointment = doc.data();
-          appointmentsData[doc.id] = appointment.status; // Use document ID as the key
-        });
-
-        console.log("Appointments fetched:", appointmentsData);
-
-        // Combine transaction data with user names and appointment statuses
-        const updatedTransactions = filteredTransactions.map((transaction) => ({
-          ...transaction,
-          fullName: usersData[transaction.userId] || transaction.userName,
-          status: transaction.status,
-        }));
-
-        console.log("Updated Transactions:", updatedTransactions);
-
-        setTransactions(updatedTransactions);
+        setTransactions(filteredTransactions);
       } catch (error) {
         console.error("Error fetching transactions:", error);
       } finally {
@@ -104,34 +55,25 @@ const Transactions = () => {
 
   const handleStatusChange = (transaction) => {
     setConfirmationInfo(transaction);
-    setConfirmStatusDialogOpen(true); // Open the confirmation dialog for status change
+    setConfirmStatusDialogOpen(true);
   };
 
   const confirmStatusChange = async () => {
     if (confirmationInfo) {
       try {
-        // Update the appointment status in Firestore
         const appointmentDocRef = doc(
           db,
           "appointments",
           confirmationInfo.appointmentId
         );
-        await updateDoc(appointmentDocRef, {
-          status: "scheduled", // Update to the desired status
-        });
+        await updateDoc(appointmentDocRef, { status: "scheduled" });
 
-        // Update the transaction status in Firestore
         const transactionDocRef = doc(db, "transactions", confirmationInfo.id);
-        await updateDoc(transactionDocRef, {
-          status: "Paid", // Update the transaction status to Paid
-        });
+        await updateDoc(transactionDocRef, { status: "Paid" });
 
-        // Update state
         setTransactions(
           transactions.map((t) =>
-            t.id === confirmationInfo.id
-              ? { ...t, status: "Paid" } // Update the transaction status in local state
-              : t
+            t.id === confirmationInfo.id ? { ...t, status: "Paid" } : t
           )
         );
       } catch (error) {
@@ -140,15 +82,37 @@ const Transactions = () => {
           error
         );
       } finally {
-        setConfirmDialogOpen(false); // Close the confirmation dialog
-        setConfirmationInfo(null); // Clear the selected transaction
+        setConfirmStatusDialogOpen(false);
+        setConfirmationInfo(null);
       }
     }
   };
 
-  const openModal = (transaction) => {
-    console.log("Opening modal for transaction:", transaction);
-    setModalInfo(transaction);
+  const handleDeleteTransaction = (transaction) => {
+    setConfirmationInfo(transaction);
+    setConfirmDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteTransaction = async () => {
+    if (confirmationInfo) {
+      try {
+        const transactionDocRef = doc(db, "transactions", confirmationInfo.id);
+        await deleteDoc(transactionDocRef);
+
+        setTransactions(
+          transactions.filter((t) => t.id !== confirmationInfo.id)
+        );
+      } catch (error) {
+        console.error("Error deleting transaction:", error);
+      } finally {
+        setConfirmDeleteDialogOpen(false);
+        setConfirmationInfo(null);
+      }
+    }
+  };
+
+  const openModal = (modalInfo) => {
+    setModalInfo(modalInfo);
   };
 
   const closeModal = () => {
@@ -168,79 +132,6 @@ const Transactions = () => {
     }
   };
 
-  const handleEditTransaction = (transaction) => {
-    setAddTransactionModalOpen(true);
-    setNewTransaction({
-      ...transaction, // Keep all details for display
-    });
-  };
-
-  const handleDeleteTransaction = (transaction) => {
-    setConfirmationInfo(transaction);
-    setConfirmDeleteDialogOpen(true); // Open the confirmation dialog for deletion
-  };
-
-  const confirmDeleteTransaction = async () => {
-    if (confirmationInfo) {
-      try {
-        // Delete the transaction from Firestore
-        const transactionDocRef = doc(db, "transactions", confirmationInfo.id);
-        await deleteDoc(transactionDocRef);
-
-        // Update the UI to reflect the deleted transaction
-        setTransactions(
-          transactions.filter((t) => t.id !== confirmationInfo.id)
-        );
-      } catch (error) {
-        console.error("Error deleting transaction:", error);
-      } finally {
-        setConfirmDialogOpen(false);
-        setConfirmationInfo(null);
-      }
-    }
-  };
-
-  const handleSaveTransaction = async () => {
-    try {
-      if (newTransaction.id) {
-        // Update the existing transaction
-        const transactionDocRef = doc(db, "transactions", newTransaction.id);
-        await updateDoc(transactionDocRef, {
-          ...newTransaction,
-        });
-      } else {
-        // Add a new transaction
-        const newTransactionDocRef = await addDoc(
-          collection(db, "transactions"),
-          {
-            ...newTransaction,
-            userId: "", // Add the userId if necessary, otherwise set it as needed
-            appointmentId: "", // Add the appointmentId if necessary
-            status: "pending", // Set the initial status to pending
-          }
-        );
-
-        // Update the UI with the new transaction
-        setTransactions([
-          ...transactions,
-          { id: newTransactionDocRef.id, ...newTransaction, status: "pending" },
-        ]);
-      }
-
-      // Close the modal and reset the form
-      setAddTransactionModalOpen(false);
-      setNewTransaction({
-        fullName: "",
-        paymentType: "card",
-        amount: "",
-        userId: "",
-        appointmentId: "",
-      });
-    } catch (error) {
-      console.error("Error saving transaction:", error);
-    }
-  };
-
   return (
     <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
@@ -249,12 +140,6 @@ const Transactions = () => {
           <h1 className="text-3xl font-bold text-gray-800">
             Transaction Table
           </h1>
-          <button
-            onClick={() => setAddTransactionModalOpen(true)} // Open the modal
-            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-          >
-            Add Transaction
-          </button>
         </div>
 
         {loading ? (
@@ -333,19 +218,12 @@ const Transactions = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {transaction.status === "Under Review" ? (
-                        // Show all three buttons when status is 'under review'
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handleStatusChange(transaction)}
                             className="text-indigo-600 hover:text-indigo-900 bg-indigo-100 hover:bg-indigo-200 px-3 py-1 rounded-full transition duration-300"
                           >
                             Mark as Paid
-                          </button>
-                          <button
-                            onClick={() => handleEditTransaction(transaction)}
-                            className="text-blue-600 hover:text-blue-900 bg-blue-100 hover:bg-blue-200 px-3 py-1 rounded-full transition duration-300"
-                          >
-                            Edit
                           </button>
                           <button
                             onClick={() => handleDeleteTransaction(transaction)}
@@ -355,7 +233,6 @@ const Transactions = () => {
                           </button>
                         </div>
                       ) : (
-                        // Show only 'Edit' and 'Delete' buttons for other statuses
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handleEditTransaction(transaction)}
@@ -379,142 +256,68 @@ const Transactions = () => {
           </div>
         )}
 
-        <div
-          class={`fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center ${
-            addTransactionModalOpen ? "block" : "hidden"
-          }`}
-        >
-          <div class="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
-            <div class="flex justify-between items-center mb-6">
-              <h2 class="text-2xl font-bold text-gray-800">
-                {newTransaction.id ? "Edit Transaction" : "Add New Transaction"}
+        {confirmStatusDialogOpen && (
+          <div
+            className={`fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center ${
+              confirmStatusDialogOpen ? "block" : "hidden"
+            }`}
+          >
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Confirm Status Change
               </h2>
-              <button
-                onClick={() => setAddTransactionModalOpen(false)}
-                class="text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={newTransaction.fullName}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  readOnly // Make the full name read-only
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Payment Type
-                </label>
-                <input
-                  type="text"
-                  value={newTransaction.paymentType}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  readOnly // Make the payment type read-only
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Amount
-                </label>
-                <input
-                  type="number"
-                  value={newTransaction.amount}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  readOnly // Make the amount read-only
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Status
-                </label>
-                <select
-                  value={newTransaction.status}
-                  onChange={(e) =>
-                    setNewTransaction({
-                      ...newTransaction,
-                      status: e.target.value, // Allow changing status
-                    })
-                  }
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              <p className="text-sm text-gray-700">
+                Are you sure you want to mark the related appointment as
+                "scheduled"?
+              </p>
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={() => setConfirmStatusDialogOpen(false)}
+                  className="bg-white hover:bg-gray-100 mt-5 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
                 >
-                  <option value="Under Review">Under Review</option>
-                  <option value="Paid">Paid</option>
-                </select>
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmStatusChange}
+                  className="bg-blue-500 hover:bg-blue-700 mt-5 text-white font-semibold py-2 px-4 border border-blue-700 rounded shadow"
+                >
+                  Confirm
+                </button>
               </div>
-            </form>
-
-            <div class="flex justify-end space-x-2">
-              <button
-                class="bg-white hover:bg-gray-100 mt-5 text-gray -800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
-                onClick={() => setAddTransactionModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                class="bg-blue-500 hover:bg-blue-700 mt-5 text-white font-semibold py-2 px-4 border border-blue-700 rounded shadow"
-                onClick={handleSaveTransaction}
-              >
-                {newTransaction.id ? "Save Changes" : "Add Transaction"}
-              </button>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Confirmation Dialog for Status Change */}
-        <Dialog
-          open={confirmStatusDialogOpen}
-          onClose={() => setConfirmStatusDialogOpen(false)}
-        >
-          <DialogTitle>Confirm Status Change</DialogTitle>
-          <DialogContent>
-            Are you sure you want to mark the related appointment as
-            "scheduled"?
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => setConfirmStatusDialogOpen(false)}
-              color="primary"
-            >
-              Cancel
-            </Button>
-            <Button onClick={confirmStatusChange} color="secondary">
-              Confirm
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Confirmation Dialog for Deletion */}
-        <Dialog
-          open={confirmDeleteDialogOpen}
-          onClose={() => setConfirmDeleteDialogOpen(false)}
-        >
-          <DialogTitle>Confirm Delete</DialogTitle>
-          <DialogContent>
-            Are you sure you want to delete this transaction?
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => setConfirmDeleteDialogOpen(false)}
-              color="primary"
-            >
-              Cancel
-            </Button>
-            <Button onClick={confirmDeleteTransaction} color="secondary">
-              Delete
-            </Button>
-          </DialogActions>
-        </Dialog>
+        {confirmDeleteDialogOpen && (
+          <div
+            className={`fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center ${
+              confirmDeleteDialogOpen ? "block" : "hidden"
+            }`}
+          >
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Confirm Delete
+              </h2>
+              <p className="text-sm text-gray-700">
+                Are you sure you want to delete this transaction?
+              </p>
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={() => setConfirmDeleteDialogOpen(false)}
+                  className="bg-white hover:bg-gray-100 mt-5 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteTransaction}
+                  className="bg-red-500 hover:bg-red-700 mt-5 text-white font-semibold py-2 px-4 border border-red-700 rounded shadow"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {modalInfo && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">

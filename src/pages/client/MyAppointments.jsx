@@ -16,7 +16,6 @@ import ProfileSidebar from "../../components/ProfileSidebar"; // Import ProfileS
 const MyAppointments = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [doctors, setDoctors] = useState({}); // Store doctor details
   const [hospitals, setHospitals] = useState({}); // Store hospital details
 
   useEffect(() => {
@@ -35,43 +34,28 @@ const MyAppointments = () => {
 
         setAppointments(appointmentsData); // Set the appointments state
 
-        // Fetch doctors and hospitals in parallel
-        const doctorIds = [
-          ...new Set(appointmentsData.map((app) => app.doctorId)), // Extract unique doctor IDs
-        ];
         const hospitalIds = [
           ...new Set(appointmentsData.map((app) => app.hospitalId)), // Extract unique hospital IDs
         ];
 
-        console.log("Doctor IDs:", doctorIds); // Log doctor IDs
         console.log("Hospital IDs:", hospitalIds); // Log hospital IDs
 
-        // Fetch doctor details
-        const doctorPromises = doctorIds.map((id) => getDocData("users", id));
         // Fetch hospital details
         const hospitalPromises = hospitalIds.map((id) =>
           getDocData("hospitals", id)
         );
 
-        const doctorsData = await Promise.all(doctorPromises);
         const hospitalsData = await Promise.all(hospitalPromises);
 
-        console.log("Fetched doctors:", doctorsData); // Log fetched doctors
         console.log("Fetched hospitals:", hospitalsData); // Log fetched hospitals
-
-        // Map the results to store in state
-        const doctorsMap = doctorsData.reduce((acc, doctor) => {
-          if (doctor) acc[doctor.id] = doctor; // Ensure doctor exists
-          return acc;
-        }, {});
 
         const hospitalsMap = hospitalsData.reduce((acc, hospital) => {
           if (hospital) acc[hospital.id] = hospital; // Ensure hospital exists
           return acc;
         }, {});
 
-        setDoctors(doctorsMap);
         setHospitals(hospitalsMap);
+        console.log(hospitals);
       } catch (error) {
         console.error("Error fetching appointments: ", error);
       } finally {
@@ -119,20 +103,12 @@ const MyAppointments = () => {
                   className="p-4 bg-gray-100 border border-gray-200 rounded-lg shadow-md"
                 >
                   <h2 className="text-lg font-semibold">
-                    Appointment with Dr.{" "}
-                    {doctors[appointment.doctorId]?.firstName ||
-                      "Unknown Doctor"}{" "}
-                    {doctors[appointment.doctorId]?.lastName ||
-                      "Unknown Doctor"}
+                    Appointment at{" "}
+                    {hospitals[appointment.hospitalId]?.name ||
+                      "Unknown Hospital"}
                   </h2>
                   <p>Date: {appointment.date}</p>
                   <p>Time: {appointment.time}</p>
-                  <p>
-                    Location:{" "}
-                    {hospitals[appointment.hospitalId]?.name ||
-                      "Unknown Hospital"}
-                  </p>
-
                   <p>Payment Type: {appointment.paymentType}</p>
                   <p>Status: {appointment.status}</p>
                   <p>Amount: {appointment.amount}</p>

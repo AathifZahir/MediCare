@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-} from "@mui/material";
+import { CircularProgress } from "@mui/material";
 import AdminSidebar from "../../components/AdminSidebar";
 import db from "../../firebase/firestore";
 import {
@@ -43,25 +36,23 @@ const AdminAppointment = () => {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const userRole = await getUserRoleAndHospital(); // Fetch user role
-        console.log(userRole);
+        const userRole = await getUserRoleAndHospital();
         const appointmentsCollection = collection(db, "appointments");
         const appointmentsSnapshot = await getDocs(appointmentsCollection);
         const appointmentList = await Promise.all(
           appointmentsSnapshot.docs.map(async (doc) => {
             const data = doc.data();
-            const patientName = await fetchUserName(data.userId); // Fetch user name from userId
+            const patientName = await fetchUserName(data.userId);
             return { id: doc.id, patientName, ...data };
           })
         );
 
         // Filter appointments based on user role
         if (userRole === "admin") {
-          setAppointments(appointmentList); // Admin sees all appointments
+          setAppointments(appointmentList);
         } else {
-          // If doctor or staff, filter by hospitalId
           const filteredAppointments = appointmentList.filter(
-            (appointment) => appointment.hospitalId === userRole.hospitalId // Replace `userHospitalId` with the actual hospital ID of the user
+            (appointment) => appointment.hospitalId === userRole.hospitalId
           );
           setAppointments(filteredAppointments);
         }
@@ -77,23 +68,21 @@ const AdminAppointment = () => {
 
   const handleStatusChange = (appointment) => {
     setSelectedAppointment(appointment);
-    setConfirmDialogOpen(true); // Open confirmation dialog
+    setConfirmDialogOpen(true);
   };
 
   const confirmStatusChange = async () => {
     if (selectedAppointment) {
       try {
-        // Update the appointment status in Firestore
         const appointmentDocRef = doc(
           db,
           "appointments",
           selectedAppointment.id
         );
         await updateDoc(appointmentDocRef, {
-          status: "Completed", // Change to the desired status
+          status: "Completed",
         });
 
-        // Update state with new status
         setAppointments(
           appointments.map((a) =>
             a.id === selectedAppointment.id ? { ...a, status: "Completed" } : a
@@ -102,15 +91,14 @@ const AdminAppointment = () => {
       } catch (error) {
         console.error("Error updating appointment status:", error);
       } finally {
-        setConfirmDialogOpen(false); // Close confirmation dialog
-        setSelectedAppointment(null); // Clear selected appointment
+        setConfirmDialogOpen(false);
+        setSelectedAppointment(null);
       }
     }
   };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
       <AdminSidebar />
       <div className="flex-1 p-6">
         <h1 className="text-3xl font-bold mb-6 text-gray-800">
@@ -126,34 +114,19 @@ const AdminAppointment = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Patient Name
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Appointment Date
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Time
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Action
                   </th>
                 </tr>
@@ -206,24 +179,36 @@ const AdminAppointment = () => {
           </div>
         )}
 
-        {/* Confirmation Dialog */}
-        <Dialog
-          open={confirmDialogOpen}
-          onClose={() => setConfirmDialogOpen(false)}
-        >
-          <DialogTitle>Confirm Status Change</DialogTitle>
-          <DialogContent>
-            Are you sure you want to mark this appointment as "completed"?
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setConfirmDialogOpen(false)} color="primary">
-              Cancel
-            </Button>
-            <Button onClick={confirmStatusChange} color="secondary">
-              Confirm
-            </Button>
-          </DialogActions>
-        </Dialog>
+        {confirmDialogOpen && (
+          <div
+            className={`fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center ${
+              confirmDialogOpen ? "block" : "hidden"
+            }`}
+          >
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Confirm Status Change
+              </h2>
+              <p className="text-sm text-gray-700">
+                Are you sure you want to mark this appointment as "completed"?
+              </p>
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={() => setConfirmDialogOpen(false)}
+                  className="bg-white hover:bg-gray-100 mt-5 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmStatusChange}
+                  className="bg-blue-500 hover:bg-blue-700 mt-5 text-white font-semibold py-2 px-4 border border-blue-700 rounded shadow"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
