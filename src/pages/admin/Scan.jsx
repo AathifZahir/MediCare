@@ -21,7 +21,7 @@ export default function Scan() {
     setSuccessMessage("");
 
     try {
-      const patientId = "MD0VLQkOxobPnPPD9B2kfFwTHTw1"; // Replace with dynamic patient ID from QR code
+      const patientId = "hdfjayMStOY3BRZZYuF3LbPMKcl1"; // Replace with dynamic patient ID from QR code
       const docRef = doc(db, "users", patientId);
       const docSnap = await getDoc(docRef);
 
