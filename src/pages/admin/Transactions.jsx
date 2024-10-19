@@ -17,13 +17,15 @@ import {
   doc,
   addDoc,
 } from "firebase/firestore";
+import getUserRoleAndHospital from "../../utils/getUserRoleAndHospital";
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
   const [modalInfo, setModalInfo] = useState(null);
   const [confirmationInfo, setConfirmationInfo] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmStatusDialogOpen, setConfirmStatusDialogOpen] = useState(false);
+  const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
   const [addTransactionModalOpen, setAddTransactionModalOpen] = useState(false);
   const [newTransaction, setNewTransaction] = useState({
     fullName: "",
@@ -36,6 +38,8 @@ const Transactions = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const { role, hospitalId } = await getUserRoleAndHospital(); // Fetch user role and hospital ID
+
         // Fetch transactions
         const transactionsCollection = collection(db, "transactions");
         const transactionSnapshot = await getDocs(transactionsCollection);
@@ -45,6 +49,16 @@ const Transactions = () => {
         }));
 
         console.log("Transactions fetched:", transactionList);
+
+        // Filter transactions based on user role
+        const filteredTransactions =
+          role === "admin"
+            ? transactionList // Admin sees all transactions
+            : transactionList.filter(
+                (transaction) => transaction.hospitalId === hospitalId
+              ); // Filter by hospitalId for doctor/staff
+
+        console.log("Filtered Transactions:", filteredTransactions);
 
         // Fetch users
         const usersCollection = collection(db, "users");
@@ -69,10 +83,10 @@ const Transactions = () => {
         console.log("Appointments fetched:", appointmentsData);
 
         // Combine transaction data with user names and appointment statuses
-        const updatedTransactions = transactionList.map((transaction) => ({
+        const updatedTransactions = filteredTransactions.map((transaction) => ({
           ...transaction,
           fullName: usersData[transaction.userId] || transaction.userName,
-          status: appointmentsData[transaction.appointmentId] || "completed",
+          status: transaction.status,
         }));
 
         console.log("Updated Transactions:", updatedTransactions);
@@ -90,7 +104,7 @@ const Transactions = () => {
 
   const handleStatusChange = (transaction) => {
     setConfirmationInfo(transaction);
-    setConfirmDialogOpen(true); // Open the confirmation dialog
+    setConfirmStatusDialogOpen(true); // Open the confirmation dialog for status change
   };
 
   const confirmStatusChange = async () => {
@@ -106,16 +120,25 @@ const Transactions = () => {
           status: "scheduled", // Update to the desired status
         });
 
+        // Update the transaction status in Firestore
+        const transactionDocRef = doc(db, "transactions", confirmationInfo.id);
+        await updateDoc(transactionDocRef, {
+          status: "Paid", // Update the transaction status to Paid
+        });
+
         // Update state
         setTransactions(
           transactions.map((t) =>
-            t.appointmentId === confirmationInfo.appointmentId
-              ? { ...t, status: "scheduled" }
+            t.id === confirmationInfo.id
+              ? { ...t, status: "Paid" } // Update the transaction status in local state
               : t
           )
         );
       } catch (error) {
-        console.error("Error updating appointment status:", error);
+        console.error(
+          "Error updating appointment or transaction status:",
+          error
+        );
       } finally {
         setConfirmDialogOpen(false); // Close the confirmation dialog
         setConfirmationInfo(null); // Clear the selected transaction
@@ -145,49 +168,16 @@ const Transactions = () => {
     }
   };
 
-  const handleAddTransaction = async () => {
-    try {
-      // You may want to validate the input fields here
-
-      // Add the new transaction to Firestore
-      const newTransactionDocRef = await addDoc(
-        collection(db, "transactions"),
-        {
-          ...newTransaction,
-          userId: "", // Add the userId if necessary, otherwise set it as needed
-          appointmentId: "", // Add the appointmentId if necessary
-          status: "pending", // Set the initial status to pending
-        }
-      );
-
-      // Update the UI with the new transaction
-      setTransactions([
-        ...transactions,
-        { id: newTransactionDocRef.id, ...newTransaction, status: "pending" },
-      ]);
-
-      // Close the modal and reset the form
-      setAddTransactionModalOpen(false);
-      setNewTransaction({
-        fullName: "",
-        paymentType: "card",
-        amount: "",
-        userId: "",
-        appointmentId: "",
-      });
-    } catch (error) {
-      console.error("Error adding transaction:", error);
-    }
-  };
-
   const handleEditTransaction = (transaction) => {
     setAddTransactionModalOpen(true);
-    setNewTransaction(transaction);
+    setNewTransaction({
+      ...transaction, // Keep all details for display
+    });
   };
 
   const handleDeleteTransaction = (transaction) => {
     setConfirmationInfo(transaction);
-    setConfirmDialogOpen(true);
+    setConfirmDeleteDialogOpen(true); // Open the confirmation dialog for deletion
   };
 
   const confirmDeleteTransaction = async () => {
@@ -333,7 +323,7 @@ const Transactions = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          transaction.status === "paid"
+                          transaction.status === "Paid"
                             ? "bg-green-100 text-green-800"
                             : "bg-yellow-100 text-yellow-800"
                         }`}
@@ -342,7 +332,8 @@ const Transactions = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {transaction.status === "pending" && (
+                      {transaction.status === "Under Review" ? (
+                        // Show all three buttons when status is 'under review'
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handleStatusChange(transaction)}
@@ -350,6 +341,22 @@ const Transactions = () => {
                           >
                             Mark as Paid
                           </button>
+                          <button
+                            onClick={() => handleEditTransaction(transaction)}
+                            className="text-blue-600 hover:text-blue-900 bg-blue-100 hover:bg-blue-200 px-3 py-1 rounded-full transition duration-300"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTransaction(transaction)}
+                            className="text-red-600 hover:text-red-900 bg-red-100 hover:bg-red-200 px-3 py-1 rounded-full transition duration-300"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ) : (
+                        // Show only 'Edit' and 'Delete' buttons for other statuses
+                        <div className="flex space-x-2">
                           <button
                             onClick={() => handleEditTransaction(transaction)}
                             className="text-blue-600 hover:text-blue-900 bg-blue-100 hover:bg-blue-200 px-3 py-1 rounded-full transition duration-300"
@@ -372,26 +379,6 @@ const Transactions = () => {
           </div>
         )}
 
-        {/* Confirmation Dialog */}
-        <Dialog
-          open={confirmDialogOpen}
-          onClose={() => setConfirmDialogOpen(false)}
-        >
-          <DialogTitle>Confirm Status Change</DialogTitle>
-          <DialogContent>
-            Are you sure you want to mark the related appointment as
-            "scheduled"?
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setConfirmDialogOpen(false)} color="primary">
-              Cancel
-            </Button>
-            <Button onClick={confirmStatusChange} color="secondary">
-              Confirm
-            </Button>
-          </DialogActions>
-        </Dialog>
-
         <div
           class={`fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center ${
             addTransactionModalOpen ? "block" : "hidden"
@@ -410,116 +397,60 @@ const Transactions = () => {
               </button>
             </div>
 
-            <form class="space-y-4">
+            <form className="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700">
                   Full Name
                 </label>
                 <input
                   type="text"
                   value={newTransaction.fullName}
-                  onChange={(e) =>
-                    setNewTransaction({
-                      ...newTransaction,
-                      fullName: e.target.value,
-                    })
-                  }
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  readOnly // Make the full name read-only
                 />
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700">
                   Payment Type
                 </label>
-                <select
+                <input
+                  type="text"
                   value={newTransaction.paymentType}
-                  onChange={(e) =>
-                    setNewTransaction({
-                      ...newTransaction,
-                      paymentType: e.target.value,
-                    })
-                  }
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                >
-                  <option value="card">Card</option>
-                  <option value="cash">Cash</option>
-                  <option value="insurance">Insurance</option>
-                </select>
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  readOnly // Make the payment type read-only
+                />
               </div>
 
-              {newTransaction.paymentType === "card" && (
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">
-                    Card Number
-                  </label>
-                  <input
-                    type="text"
-                    value={newTransaction.cardNumber}
-                    onChange={(e) =>
-                      setNewTransaction({
-                        ...newTransaction,
-                        cardNumber: e.target.value,
-                      })
-                    }
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  />
-                </div>
-              )}
-
-              {newTransaction.paymentType === "insurance" && (
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">
-                    Policy Number
-                  </label>
-                  <input
-                    type="text"
-                    value={newTransaction.policyNumber}
-                    onChange={(e) =>
-                      setNewTransaction({
-                        ...newTransaction,
-                        policyNumber: e.target.value,
-                      })
-                    }
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  />
-                </div>
-              )}
-
-              {newTransaction.paymentType === "insurance" && (
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">
-                    Provider Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newTransaction.providerName}
-                    onChange={(e) =>
-                      setNewTransaction({
-                        ...newTransaction,
-                        providerName: e.target.value,
-                      })
-                    }
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  />
-                </div>
-              )}
-
               <div>
-                <label class="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700">
                   Amount
                 </label>
                 <input
                   type="number"
                   value={newTransaction.amount}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  readOnly // Make the amount read-only
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Status
+                </label>
+                <select
+                  value={newTransaction.status}
                   onChange={(e) =>
                     setNewTransaction({
                       ...newTransaction,
-                      amount: e.target.value,
+                      status: e.target.value, // Allow changing status
                     })
                   }
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                >
+                  <option value="Under Review">Under Review</option>
+                  <option value="Paid">Paid</option>
+                </select>
               </div>
             </form>
 
@@ -540,16 +471,43 @@ const Transactions = () => {
           </div>
         </div>
 
+        {/* Confirmation Dialog for Status Change */}
         <Dialog
-          open={confirmDialogOpen}
-          onClose={() => setConfirmDialogOpen(false)}
+          open={confirmStatusDialogOpen}
+          onClose={() => setConfirmStatusDialogOpen(false)}
+        >
+          <DialogTitle>Confirm Status Change</DialogTitle>
+          <DialogContent>
+            Are you sure you want to mark the related appointment as
+            "scheduled"?
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setConfirmStatusDialogOpen(false)}
+              color="primary"
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmStatusChange} color="secondary">
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Confirmation Dialog for Deletion */}
+        <Dialog
+          open={confirmDeleteDialogOpen}
+          onClose={() => setConfirmDeleteDialogOpen(false)}
         >
           <DialogTitle>Confirm Delete</DialogTitle>
           <DialogContent>
             Are you sure you want to delete this transaction?
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setConfirmDialogOpen(false)} color="primary">
+            <Button
+              onClick={() => setConfirmDeleteDialogOpen(false)}
+              color="primary"
+            >
               Cancel
             </Button>
             <Button onClick={confirmDeleteTransaction} color="secondary">
@@ -580,6 +538,8 @@ const Transactions = () => {
                     Payment Type: {modalInfo.paymentType}
                   </p>
                 </div>
+
+                {/* Common transaction fields */}
                 <p className="text-sm text-gray-700">
                   Amount: LKR {modalInfo.amount}
                 </p>
@@ -589,6 +549,28 @@ const Transactions = () => {
                 <p className="text-sm text-gray-700">
                   Full Name: {modalInfo.fullName}
                 </p>
+
+                {/* Conditionally render fields based on payment type */}
+                {modalInfo.paymentType === "insurance" && (
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-700">
+                      Policy Number: {modalInfo.policyNumber}
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      Provider Name: {modalInfo.providerName}
+                    </p>
+                  </div>
+                )}
+
+                {modalInfo.paymentType === "card" && (
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-700">
+                      Card Number: **** **** ****{" "}
+                      {modalInfo.cardNumber.slice(-4)}
+                      {/* Only show the last 4 digits of the card */}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

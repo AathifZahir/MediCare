@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "tailwindcss/tailwind.css";
+import { useNavigate } from "react-router-dom"; // Import useNavigate hook
 import auth from "../firebase/auth"; // Import your Firebase auth
 import { getFirestore, doc, getDoc } from "firebase/firestore"; // Import Firestore methods
 
@@ -10,6 +11,7 @@ const ProfileSidebar = () => {
     role: "",
   });
   const db = getFirestore(); // Initialize Firestore
+  const navigate = useNavigate(); // Initialize useNavigate
 
   // Fetch user's profile info from Firestore
   useEffect(() => {
@@ -30,6 +32,18 @@ const ProfileSidebar = () => {
     };
     fetchUserInfo();
   }, [db]);
+
+  // Handle sign out and redirect to login
+  const handleSignOut = () => {
+    auth
+      .signOut()
+      .then(() => {
+        navigate("/login"); // Redirect to the login page after signing out
+      })
+      .catch((error) => {
+        console.error("Error signing out:", error);
+      });
+  };
 
   return (
     <div className="fixed left-10 top-70 h-[400px] w-64 bg-white text-gray-800 shadow-lg flex flex-col items-center justify-between py-6 rounded-lg border border-gray-200">
@@ -64,7 +78,7 @@ const ProfileSidebar = () => {
       {/* Logout Section */}
       <div className="w-full px-4">
         <button
-          onClick={() => auth.signOut()} // Sign out the user
+          onClick={handleSignOut} // Trigger sign out and redirect
           className="w-full py-2 px-4 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-md"
         >
           Logout

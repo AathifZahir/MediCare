@@ -16,6 +16,7 @@ import {
   doc,
   getDoc,
 } from "firebase/firestore";
+import getUserRoleAndHospital from "../../utils/getUserRoleAndHospital";
 
 const AdminAppointment = () => {
   const [appointments, setAppointments] = useState([]);
@@ -42,6 +43,8 @@ const AdminAppointment = () => {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
+        const userRole = await getUserRoleAndHospital(); // Fetch user role
+        console.log(userRole);
         const appointmentsCollection = collection(db, "appointments");
         const appointmentsSnapshot = await getDocs(appointmentsCollection);
         const appointmentList = await Promise.all(
@@ -52,7 +55,16 @@ const AdminAppointment = () => {
           })
         );
 
-        setAppointments(appointmentList);
+        // Filter appointments based on user role
+        if (userRole === "admin") {
+          setAppointments(appointmentList); // Admin sees all appointments
+        } else {
+          // If doctor or staff, filter by hospitalId
+          const filteredAppointments = appointmentList.filter(
+            (appointment) => appointment.hospitalId === userRole.hospitalId // Replace `userHospitalId` with the actual hospital ID of the user
+          );
+          setAppointments(filteredAppointments);
+        }
       } catch (error) {
         console.error("Error fetching appointments:", error);
       } finally {
@@ -78,13 +90,13 @@ const AdminAppointment = () => {
           selectedAppointment.id
         );
         await updateDoc(appointmentDocRef, {
-          status: "completed", // Change to the status you want to update
+          status: "Completed", // Change to the desired status
         });
 
         // Update state with new status
         setAppointments(
           appointments.map((a) =>
-            a.id === selectedAppointment.id ? { ...a, status: "completed" } : a
+            a.id === selectedAppointment.id ? { ...a, status: "Completed" } : a
           )
         );
       } catch (error) {
@@ -167,9 +179,9 @@ const AdminAppointment = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          appointment.status === "completed"
+                          appointment.status === "Completed"
                             ? "bg-green-100 text-green-800"
-                            : appointment.status === "scheduled"
+                            : appointment.status === "Scheduled"
                             ? "bg-yellow-100 text-yellow-800"
                             : "bg-gray-100 text-gray-800"
                         }`}
@@ -178,7 +190,7 @@ const AdminAppointment = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {appointment.status === "scheduled" && (
+                      {appointment.status === "Scheduled" && (
                         <button
                           onClick={() => handleStatusChange(appointment)}
                           className="text-indigo-600 hover:text-indigo-900 bg-indigo-100 hover:bg-indigo-200 px-3 py-1 rounded-full transition duration-300"

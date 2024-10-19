@@ -151,9 +151,9 @@ const PaymentGateway = () => {
 
         // Add specific fields based on payment type
         if (paymentType === "card") {
-          appointmentData.status = "scheduled";
+          appointmentData.status = "Scheduled";
         } else if (paymentType === "insurance") {
-          appointmentData.status = "under review";
+          appointmentData.status = "Pending";
         }
 
         // Create the appointment document in Firestore and get its ID
@@ -171,6 +171,7 @@ const PaymentGateway = () => {
           userId,
           userName: `${userName.firstName} ${userName.lastName}`, // Add user's name
           timestamp: new Date(),
+          hospitalId,
         };
 
         // Add specific fields based on payment type
@@ -183,7 +184,7 @@ const PaymentGateway = () => {
             document.getElementById("policyNumber").value;
           transactionData.providerName =
             document.getElementById("providerName").value;
-          transactionData.status = "Pending";
+          transactionData.status = "Under Review";
         }
 
         // Store the transaction in the transactions collection and get its ID
