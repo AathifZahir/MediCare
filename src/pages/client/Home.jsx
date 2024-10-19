@@ -7,8 +7,10 @@ import {
   Video,
   FileText,
   Shield,
+  Book,
 } from "lucide-react";
-import HomeSidebar from "../../components/HomeNavbar"; // Adjust the path if necessary
+import HomeSidebar from "../../components/HomeNavbar";
+import HomeFooter from "../../components/HomeFooter";
 
 const features = [
   {
@@ -17,9 +19,9 @@ const features = [
     description: "Efficiently manage patient records and appointments",
   },
   {
-    icon: Video,
-    title: "Telemedicine",
-    description: "Conduct virtual consultations securely and conveniently",
+    icon: Book,
+    title: "Appointments",
+    description: "Book your appointments with ease with online payment",
   },
   {
     icon: FileText,
@@ -78,7 +80,7 @@ const Home = () => {
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: "url('/placeholder.svg?height=1080&width=1920')",
+            backgroundImage: "url('/homebg.jpg')",
           }}
         >
           <div className="absolute inset-0 bg-black opacity-50"></div>
@@ -122,11 +124,6 @@ const Home = () => {
             <ChevronLeft />
           </button>
           <div className="bg-white p-6 rounded-lg shadow-md mx-auto max-w-md text-center">
-            <img
-              src={testimonials[currentTestimonial].image}
-              alt={testimonials[currentTestimonial].name}
-              className="rounded-full mx-auto mb-4"
-            />
             <h3 className="text-lg font-semibold">
               {testimonials[currentTestimonial].name}
             </h3>
@@ -145,6 +142,7 @@ const Home = () => {
           </button>
         </div>
       </section>
+      <HomeFooter />
     </div>
   );
 };
