@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import ServiceCard from "../../components/ServiceCard";
-import { services } from "../../data/ServicesData"; // Adjust the import path if necessary
+import { services } from "../../data/ServicesData";
 import HomeSidebar from "../../components/HomeNavbar"; // Import HomeSidebar
 import AppointmentModal from "../../components/AppointmentModal"; // Import the modal
 
@@ -8,11 +8,13 @@ const ServicesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
 
+  //on press, hanlde book now
   const handleBookNow = (service) => {
     setSelectedService(service);
     setIsModalOpen(true);
   };
 
+  //close booking modal
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedService(null);
