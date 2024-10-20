@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { CircularProgress } from "@mui/material";
 import AdminSidebar from "../../components/AdminSidebar";
+import AdminAppointmentModal from "../../components/AdminAppointmentModal"; // Import the modal component
 import db from "../../firebase/firestore";
 import {
   collection,
@@ -16,6 +17,7 @@ const AdminAppointment = () => {
   const [loading, setLoading] = useState(true);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
 
   // Fetch user details for each appointment using userId
   const fetchUserName = async (userId) => {
@@ -102,9 +104,18 @@ const AdminAppointment = () => {
     <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
       <div className="flex-1 p-6">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">
-          Manage Appointments
-        </h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">
+            Manage Appointments
+          </h1>
+          {/* Create Appointment Button */}
+          <button
+            className="bg-blue-500 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition duration-300"
+            onClick={() => setIsModalOpen(true)} // Open modal on click
+          >
+            Create Appointment
+          </button>
+        </div>
 
         {loading ? (
           <div className="flex justify-center items-center h-full">
@@ -137,7 +148,7 @@ const AdminAppointment = () => {
                   <tr key={appointment.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {appointment.patientName}
+                        {appointment.userName}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -210,6 +221,13 @@ const AdminAppointment = () => {
             </div>
           </div>
         )}
+
+        {/* Admin Appointment Modal */}
+        <AdminAppointmentModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)} // Close modal handler
+          service={null} // You can pass a specific service if needed
+        />
       </div>
     </div>
   );
