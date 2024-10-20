@@ -3,19 +3,19 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom"; // For routing
-import PaymentGateway from "./PaymentGateway"; // Adjust the import path as needed
-import auth from "../../firebase/auth"; // Import your auth instance
-import db from "../../firebase/firestore"; // Import your Firestore config
+import PaymentGateway from "../src/pages/client/PaymentGateway"; // Adjust the import path as needed
+import auth from "../src/firebase/auth"; // Import your auth instance
+import db from "../src/firebase/firestore"; // Import your Firestore config
 import { addDoc } from "firebase/firestore"; // Import addDoc
 
 // Mocking Firestore addDoc function
-jest.mock("../../firebase/firestore", () => ({
+jest.mock("../src/firebase/firestore", () => ({
   ...jest.requireActual("../../firebase/firestore"),
   addDoc: jest.fn(),
 }));
 
 // Mock the auth instance
-jest.mock("../../firebase/auth", () => ({
+jest.mock("../src/firebase/auth", () => ({
   currentUser: { uid: "testUserId" },
 }));
 

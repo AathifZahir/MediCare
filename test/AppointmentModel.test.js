@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import AppointmentModal from "./AppointmentModal"; // Adjust the path as necessary
+import AppointmentModal from "../src/components/AppointmentModal"; // Adjust the path as necessary
 import db from "../src/firebase/firestore"; // Adjust the import path as necessary
 import { collection, addDoc } from "firebase/firestore";
 
