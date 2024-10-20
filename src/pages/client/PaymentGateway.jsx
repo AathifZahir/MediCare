@@ -78,6 +78,7 @@ const PaymentGateway = () => {
   };
 
   const handleCardNumberChange = (event) => {
+    //Allow only numeric values and limit to 16 and also add spaces
     const value = event.target.value
       .replace(/\D/g, "")
       .replace(/(\d{4})/g, "$1 ")
@@ -88,12 +89,12 @@ const PaymentGateway = () => {
   };
 
   const handleCvvChange = (event) => {
-    const value = event.target.value.replace(/\D/g, "").slice(0, 3); // Allow only numeric values
+    const value = event.target.value.replace(/\D/g, "").slice(0, 3); // Allow only numeric values and limit to 3 digits
     setCvv(value);
   };
 
   const handleExpiryDateChange = (event) => {
-    const value = event.target.value.replace(/\D/g, "").slice(0, 4); // Allow only numeric values
+    const value = event.target.value.replace(/\D/g, "").slice(0, 4); // Allow only numeric values and limit to 4 digits
     if (value.length > 2) {
       setExpiryDate(`${value.slice(0, 2)}/${value.slice(2)}`); // Format as MM/YY
     } else {
@@ -101,6 +102,7 @@ const PaymentGateway = () => {
     }
   };
 
+  //validate inputs from the payment according to payment type
   const validateInputs = () => {
     if (
       paymentType === "card" &&
@@ -149,6 +151,7 @@ const PaymentGateway = () => {
           timestamp: new Date(),
         };
 
+        //check payment type and set status accordingly
         if (paymentType === "card") {
           appointmentData.status = "Scheduled";
         } else if (paymentType === "insurance") {
@@ -275,6 +278,7 @@ const PaymentGateway = () => {
           </div>
         )}
 
+        {/*change forms for card*/}
         {paymentType === "card" && (
           <div className="mb-4">
             <label htmlFor="expiryDate" className="block mb-2">
@@ -292,6 +296,7 @@ const PaymentGateway = () => {
           </div>
         )}
 
+        {/*change forms for card*/}
         {paymentType === "card" && (
           <div className="mb-4">
             <label htmlFor="cvv" className="block mb-2">
@@ -309,6 +314,7 @@ const PaymentGateway = () => {
           </div>
         )}
 
+        {/*change forms for insurance*/}
         {paymentType === "insurance" && (
           <>
             <div className="mb-4">
@@ -348,6 +354,7 @@ const PaymentGateway = () => {
         </button>
       </form>
 
+      {/*loading animation*/}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={2000}
