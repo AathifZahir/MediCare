@@ -23,7 +23,7 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
   const [selectedService, setSelectedService] = useState(null); // State to store selected service details
   const [bookedSlots, setBookedSlots] = useState([]); // State to store already booked time slots
   const [error, setError] = useState(""); // State to store error messages
-  const [snackbarOpen, setSnackbarOpen] = useState(false); // State to control snackbar visibility
+  const [snackbarOpen, setSnackbarOpen] = useState(false); // State to control Snackbar visibility
 
   // Fetch available hospitals from Firestore when the component loads
   useEffect(() => {
