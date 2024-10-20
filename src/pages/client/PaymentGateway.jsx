@@ -19,9 +19,10 @@ const PaymentGateway = () => {
   const queryParams = new URLSearchParams(location.search); // Extract query params
 
   const hospitalId = queryParams.get("hospitalId"); // Get hospitalId
-  const time = queryParams.get("time"); // Get type (e.g., "Consultation")
+  const time = queryParams.get("time"); // Get time
   const date = queryParams.get("date"); // Get date
-  const serviceId = queryParams.get("serviceId"); // Get time
+  const serviceId = queryParams.get("serviceId"); // Get serviceId
+  const doctorId = queryParams.get("doctorId"); // Get doctorId if applicable
 
   const getServiceFee = (serviceId) => {
     const service = services.find(
@@ -40,7 +41,7 @@ const PaymentGateway = () => {
   const [expiryDate, setExpiryDate] = useState("");
 
   const [paymentType, setPaymentType] = useState("card");
-  const [amount, setAmount] = useState(getServiceFee(serviceId)); // Set initial amount based on type
+  const [amount, setAmount] = useState(getServiceFee(serviceId)); // Set initial amount based on serviceId
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -78,7 +79,6 @@ const PaymentGateway = () => {
   };
 
   const handleCardNumberChange = (event) => {
-    //Allow only numeric values and limit to 16 and also add spaces
     const value = event.target.value
       .replace(/\D/g, "")
       .replace(/(\d{4})/g, "$1 ")
@@ -89,12 +89,12 @@ const PaymentGateway = () => {
   };
 
   const handleCvvChange = (event) => {
-    const value = event.target.value.replace(/\D/g, "").slice(0, 3); // Allow only numeric values and limit to 3 digits
+    const value = event.target.value.replace(/\D/g, "").slice(0, 3); // Allow only numeric values
     setCvv(value);
   };
 
   const handleExpiryDateChange = (event) => {
-    const value = event.target.value.replace(/\D/g, "").slice(0, 4); // Allow only numeric values and limit to 4 digits
+    const value = event.target.value.replace(/\D/g, "").slice(0, 4); // Allow only numeric values
     if (value.length > 2) {
       setExpiryDate(`${value.slice(0, 2)}/${value.slice(2)}`); // Format as MM/YY
     } else {
@@ -102,7 +102,6 @@ const PaymentGateway = () => {
     }
   };
 
-  //validate inputs from the payment according to payment type
   const validateInputs = () => {
     if (
       paymentType === "card" &&
@@ -146,12 +145,12 @@ const PaymentGateway = () => {
           paymentType,
           date,
           time,
+          doctorId: doctorId || null, // Add doctorId only if available
           userId,
           userName: `${userName.firstName} ${userName.lastName}`, // Add user's name
           timestamp: new Date(),
         };
 
-        //check payment type and set status accordingly
         if (paymentType === "card") {
           appointmentData.status = "Scheduled";
         } else if (paymentType === "insurance") {
@@ -278,7 +277,6 @@ const PaymentGateway = () => {
           </div>
         )}
 
-        {/*change forms for card*/}
         {paymentType === "card" && (
           <div className="mb-4">
             <label htmlFor="expiryDate" className="block mb-2">
@@ -296,7 +294,6 @@ const PaymentGateway = () => {
           </div>
         )}
 
-        {/*change forms for card*/}
         {paymentType === "card" && (
           <div className="mb-4">
             <label htmlFor="cvv" className="block mb-2">
@@ -314,7 +311,6 @@ const PaymentGateway = () => {
           </div>
         )}
 
-        {/*change forms for insurance*/}
         {paymentType === "insurance" && (
           <>
             <div className="mb-4">
@@ -354,7 +350,6 @@ const PaymentGateway = () => {
         </button>
       </form>
 
-      {/*loading animation*/}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={2000}

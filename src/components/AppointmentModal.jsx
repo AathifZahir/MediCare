@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 import db from "../firebase/firestore"; // Adjust the import path as necessary
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { X } from "lucide-react"; // Importing the cancel icon
+import { services } from "../data/ServicesData"; // Importing services data
+import auth from "../firebase/auth"; // Import Firebase auth for current user
 
 const AppointmentModal = ({ isOpen, onClose, service }) => {
   const [date, setDate] = useState("");
@@ -9,9 +12,43 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
   const [error, setError] = useState("");
   const [hospitals, setHospitals] = useState([]);
   const [selectedHospital, setSelectedHospital] = useState("");
+  const [doctors, setDoctors] = useState([]);
+  const [selectedDoctor, setSelectedDoctor] = useState("");
   const [bookedAppointments, setBookedAppointments] = useState([]);
   const [disabledDates, setDisabledDates] = useState([]);
+  const [userId, setUserId] = useState(null);
+  const [userName, setUserName] = useState("");
+  const [serviceFee, setServiceFee] = useState(0);
 
+  const navigate = useNavigate(); // Initialize navigate
+
+  // Fetch the logged-in user data
+  useEffect(() => {
+    const fetchUserData = () => {
+      const user = auth.currentUser;
+      if (user) {
+        setUserId(user.uid);
+        setUserName(`${user.displayName || "User"}`);
+      }
+    };
+    fetchUserData();
+  }, []);
+
+  // Fetch the service fee dynamically from servicesData.js based on the service ID
+  useEffect(() => {
+    const fetchServiceFee = () => {
+      const selectedService = services.find((item) => item.id === service.id);
+      if (selectedService) {
+        const fee = parseInt(selectedService.fee.replace(/[^0-9]/g, ""), 10);
+        setServiceFee(fee || 0);
+      }
+    };
+    if (service) {
+      fetchServiceFee();
+    }
+  }, [service]);
+
+  // Fetch hospitals on modal open
   useEffect(() => {
     const fetchHospitals = async () => {
       try {
@@ -32,12 +69,16 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
     }
   }, [isOpen]);
 
+  // Fetch appointments when hospital is selected
   useEffect(() => {
     const fetchAppointments = async () => {
       if (!selectedHospital) return;
       try {
         const appointmentsCollection = collection(db, "appointments");
-        const q = query(appointmentsCollection, where("hospitalId", "==", selectedHospital.id));
+        const q = query(
+          appointmentsCollection,
+          where("hospitalId", "==", selectedHospital.id)
+        );
         const appointmentSnapshot = await getDocs(q);
         const appointmentData = appointmentSnapshot.docs.map((doc) => ({
           date: doc.data().date,
@@ -72,8 +113,38 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
     }
   }, [selectedHospital]);
 
+  // Fetch doctors for the selected hospital (only if service is Doctor Appointment)
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      if (!selectedHospital || service?.id !== 5) return;
+
+      try {
+        const usersCollection = collection(db, "users");
+        const q = query(
+          usersCollection,
+          where("hospital", "==", selectedHospital.id),
+          where("role", "==", "doctor")
+        );
+        const doctorSnapshot = await getDocs(q);
+        const doctorData = doctorSnapshot.docs.map((doc) => ({
+          id: doc.id, // Get doctor ID
+          name: `${doc.data().firstName} ${doc.data().lastName}`, // Get doctor's full name
+        }));
+
+        setDoctors(doctorData); // Store the fetched doctors
+      } catch (error) {
+        console.error("Error retrieving doctors: ", error);
+      }
+    };
+
+    if (service?.id === 5 && selectedHospital) {
+      fetchDoctors();
+    }
+  }, [selectedHospital, service]);
+
   if (!isOpen) return null;
 
+  // Generate available time slots
   const generateTimeSlots = () => {
     const slots = [];
     for (let hour = 9; hour < 17; hour++) {
@@ -91,7 +162,8 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
 
   const timeSlots = generateTimeSlots();
 
-  const handleSubmit = (e) => {
+  // Handle form submission
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -104,22 +176,17 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
       return;
     }
 
-    const hospitalId = selectedHospital.id;
-    const serviceId = service.id;
-    const paymentUrl = `/payment-gateway?hospitalId=${hospitalId}&date=${date}&time=${time}&serviceId=${serviceId}`;
-
-    window.location.href = paymentUrl;
-    console.log(
-      `Appointment created for service: ${service.name} at ${selectedHospital.name} on ${date} at ${time}`
+    // Pass data to the Payment Gateway without storing in Firestore
+    navigate(
+      `/payment-gateway?hospitalId=${selectedHospital.id}&date=${date}&time=${time}&serviceId=${service.id}&doctorId=${selectedDoctor}`
     );
-
-    onClose();
   };
 
   const handleCancel = () => {
     setDate("");
     setTime("");
     setSelectedHospital("");
+    setSelectedDoctor("");
     setError("");
     onClose();
   };
@@ -173,6 +240,34 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
               ))}
             </select>
           </div>
+
+          {service?.id === 5 && ( // Show only if it's a doctor appointment
+            <div className="flex flex-col space-y-2">
+              <label
+                htmlFor="doctor"
+                className="text-sm font-medium text-gray-700"
+              >
+                Doctor:
+              </label>
+              <select
+                id="doctor"
+                value={selectedDoctor}
+                onChange={(e) => setSelectedDoctor(e.target.value)}
+                required
+                className="py-2 px-4 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="" disabled>
+                  Select a doctor
+                </option>
+                {doctors.map((doctor) => (
+                  <option key={doctor.id} value={doctor.id}>
+                    {doctor.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="flex flex-col space-y-2">
             <label htmlFor="date" className="text-sm font-medium text-gray-700">
               Date:
@@ -185,9 +280,10 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
               min={tomorrowString}
               disabled={disabledDates.includes(date)}
               required
-              className="py-2 px-4 border border-gray-300 rounded-md shadow-sm focus:ring -blue-500 focus:border-blue-500"
+              className="py-2 px-4 border border-gray-300 rounded-md shadow-sm focus:ring focus:border-blue-500"
             />
           </div>
+
           <div className="flex flex-col space-y-2">
             <label htmlFor="time" className="text-sm font-medium text-gray-700">
               Time:
@@ -209,6 +305,7 @@ const AppointmentModal = ({ isOpen, onClose, service }) => {
               ))}
             </select>
           </div>
+
           <div className="flex justify-center space-x-4">
             <button
               type="submit"
