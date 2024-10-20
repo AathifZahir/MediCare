@@ -2,6 +2,13 @@ import React, { useState, useEffect } from "react";
 import db from "../firebase/firestore"; // Import Firestore configuration
 import { collection, getDocs, addDoc, Timestamp, query, where } from "firebase/firestore"; // Firestore methods
 import { services } from "../data/ServicesData"; // Import services data
+import Snackbar from "@mui/material/Snackbar"; // Material UI Snackbar for notifications
+import MuiAlert from "@mui/material/Alert"; // Material UI Alert for Snackbar notifications
+
+// Create an Alert component for Snackbar
+const Alert = React.forwardRef(function Alert(props, ref) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
 const AdminAppointmentModal = ({ isOpen, onClose }) => {
   const [hospitals, setHospitals] = useState([]); // State to store list of hospitals
@@ -16,6 +23,7 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
   const [selectedService, setSelectedService] = useState(null); // State to store selected service details
   const [bookedSlots, setBookedSlots] = useState([]); // State to store already booked time slots
   const [error, setError] = useState(""); // State to store error messages
+  const [snackbarOpen, setSnackbarOpen] = useState(false); // State to control snackbar visibility
 
   // Fetch available hospitals from Firestore when the component loads
   useEffect(() => {
@@ -143,6 +151,9 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
       await addDoc(collection(db, "transactions"), transactionData);
       console.log("Transaction added.");
 
+      // Show success Snackbar
+      setSnackbarOpen(true);
+
       // Reset form and close modal
       setUserName("");
       setDate("");
@@ -159,6 +170,14 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
       console.error("Error creating appointment or transaction:", error);
       setError("Failed to create appointment.");
     }
+  };
+
+  // Handle closing the Snackbar
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setSnackbarOpen(false);
   };
 
   return (
@@ -345,6 +364,17 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
             </button>
           </div>
         </form>
+
+        {/* Snackbar for success notification */}
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={3000} // Automatically hide after 3 seconds
+          onClose={handleSnackbarClose}
+        >
+          <Alert onClose={handleSnackbarClose} severity="success">
+            Appointment successfully created!
+          </Alert>
+        </Snackbar>
       </div>
     </div>
   );
