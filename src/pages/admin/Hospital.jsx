@@ -10,10 +10,6 @@ import {
 import db from "../../firebase/firestore";
 import {
   Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Snackbar,
   CircularProgress,
   Button,
@@ -34,21 +30,29 @@ const HospitalPage = () => {
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: "" });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [hospitalToDelete, setHospitalToDelete] = useState(null); // Hospital to delete
+  const [hospitalToDelete, setHospitalToDelete] = useState(null);
 
   const hospitalCollectionRef = collection(db, "hospitals");
 
+  //Fetch all hospitals
   const fetchHospitals = async () => {
     setLoading(true);
-    const data = await getDocs(hospitalCollectionRef);
-    setHospitals(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
-    setLoading(false);
+    try {
+      const data = await getDocs(hospitalCollectionRef);
+      setHospitals(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+    } catch (error) {
+      console.error("Error fetching hospitals: ", error);
+      setSnackbar({ open: true, message: "Error fetching hospitals" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchHospitals();
   }, []);
 
+  //open modal  to add new hospital or update hospital
   const handleOpenModal = (hospital = null) => {
     if (hospital) {
       setEditingHospital(hospital);
@@ -72,6 +76,7 @@ const HospitalPage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  //add or update hospitals
   const handleAddOrUpdateHospital = async () => {
     try {
       if (editingHospital) {
@@ -93,20 +98,23 @@ const HospitalPage = () => {
       handleCloseModal();
     } catch (error) {
       console.error("Error adding/updating hospital: ", error);
-      setSnackbar({ open: true, message: "Error occurred" });
+      setSnackbar({ open: true, message: error.message || "Error occurred" });
     }
   };
 
+  // handle modal open for delete
   const handleOpenDeleteDialog = (hospital) => {
-    setHospitalToDelete(hospital); // Set the hospital to be deleted
-    setDeleteDialogOpen(true); // Open the confirmation dialog
+    setHospitalToDelete(hospital);
+    setDeleteDialogOpen(true);
   };
 
+  //handle modal close for delete
   const handleCloseDeleteDialog = () => {
     setDeleteDialogOpen(false);
-    setHospitalToDelete(null); // Reset the hospital to delete
+    setHospitalToDelete(null);
   };
 
+  //handle delete if user confirms
   const handleConfirmDelete = async () => {
     try {
       const hospitalDoc = doc(db, "hospitals", hospitalToDelete.id);
@@ -115,7 +123,7 @@ const HospitalPage = () => {
       setSnackbar({ open: true, message: "Hospital deleted successfully" });
     } catch (error) {
       console.error("Error deleting hospital: ", error);
-      setSnackbar({ open: true, message: "Error occurred" });
+      setSnackbar({ open: true, message: error.message || "Error occurred" });
     } finally {
       handleCloseDeleteDialog();
     }
@@ -240,18 +248,18 @@ const HospitalPage = () => {
                     <option value="Government">Government</option>
                   </select>
                 </div>
-                <div className="flex justify-end mt-4">
+                <div className="mt-6 flex justify-between">
                   <button
                     type="button"
+                    className="bg-gray-500 text-white px-4 py-2 rounded"
                     onClick={handleCloseModal}
-                    className="bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded mr-2"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
+                    className="bg-blue-500 text-white px-4 py-2 rounded"
                     onClick={handleAddOrUpdateHospital}
-                    className="bg-blue-500 text-white font-semibold py-2 px-4 rounded"
                   >
                     {editingHospital ? "Update" : "Add"}
                   </button>
@@ -261,42 +269,30 @@ const HospitalPage = () => {
           </div>
         )}
 
-        {/* Delete confirmation dialog */}
-        {deleteDialogOpen && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
-            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
-              <h2 className="text-2xl font-bold text-gray-800">
-                Confirm Delete
-              </h2>
-              <p className="text-gray-700 mt-4">
-                Are you sure you want to delete this hospital? This action
-                cannot be undone.
-              </p>
-              <div className="flex justify-end mt-4">
-                <button
-                  onClick={handleCloseDeleteDialog}
-                  className="bg-gray-300 text-gray- 800 font-semibold py-2 px-4 rounded mr-2"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmDelete}
-                  className="bg-red-500 text-white font-semibold py-2 px-4 rounded"
-                >
-                  Confirm
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Snackbar for notifications */}
         <Snackbar
           open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
           message={snackbar.message}
-          autoHideDuration={3000}
-          onClose={() => setSnackbar({ open: false, message: "" })}
         />
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog}>
+          <div className="p-6">
+            <h2 className="text-lg font-bold">
+              Are you sure you want to delete this hospital?
+            </h2>
+            <div className="flex justify-end mt-4">
+              <Button onClick={handleCloseDeleteDialog} color="secondary">
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmDelete} color="primary">
+                Delete
+              </Button>
+            </div>
+          </div>
+        </Dialog>
       </div>
     </div>
   );

@@ -56,8 +56,8 @@ const Transactions = () => {
   }, []);
 
   const handleStatusChange = (transaction) => {
-    setConfirmationInfo(transaction);
-    setConfirmStatusDialogOpen(true);
+    setConfirmationInfo(transaction); // Set transaction for status change
+    setConfirmStatusDialogOpen(true); // Open confirmation dialog
   };
 
   const confirmStatusChange = async () => {
@@ -68,10 +68,10 @@ const Transactions = () => {
           "appointments",
           confirmationInfo.appointmentId
         );
-        await updateDoc(appointmentDocRef, { status: "scheduled" });
+        await updateDoc(appointmentDocRef, { status: "scheduled" }); //update appointment status
 
         const transactionDocRef = doc(db, "transactions", confirmationInfo.id);
-        await updateDoc(transactionDocRef, { status: "Paid" });
+        await updateDoc(transactionDocRef, { status: "Paid" }); //update transaction status
 
         setTransactions(
           transactions.map((t) =>
@@ -90,12 +90,15 @@ const Transactions = () => {
     }
   };
 
+  //handle deleting a transaction
   const handleDeleteTransaction = (transaction) => {
     setConfirmationInfo(transaction);
     setConfirmDeleteDialogOpen(true);
   };
 
+  //confirm delete transaction
   const confirmDeleteTransaction = async () => {
+    //check if confirmationInfo is not null
     if (confirmationInfo) {
       try {
         const transactionDocRef = doc(db, "transactions", confirmationInfo.id);
@@ -113,12 +116,16 @@ const Transactions = () => {
     }
   };
 
+  //handle editing a transaction
   const handleEditTransaction = (transaction) => {
     setEditTransactionInfo(transaction);
     setEditModalOpen(true);
   };
 
+  //confirm edit transaction
+  // Edit the transaction status
   const confirmEditTransaction = async () => {
+    //check if editTransactionInfo is not null
     if (editTransactionInfo) {
       try {
         // Update the transaction status
@@ -161,14 +168,17 @@ const Transactions = () => {
     }
   };
 
+  //setting modal data for payment type
   const openModal = (modalInfo) => {
     setModalInfo(modalInfo);
   };
 
+  //close modal for payment type
   const closeModal = () => {
     setModalInfo(null);
   };
 
+  //function to get the icon and color based on the payment type
   const getTypeIcon = (type) => {
     switch (type) {
       case "card":
@@ -306,6 +316,7 @@ const Transactions = () => {
           </div>
         )}
 
+        {/*adding confirm status dialog*/}
         {confirmStatusDialogOpen && (
           <div
             className={`fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center ${
@@ -338,6 +349,7 @@ const Transactions = () => {
           </div>
         )}
 
+        {/*adding confirm delete dialog*/}
         {confirmDeleteDialogOpen && (
           <div
             className={`fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center ${
@@ -369,6 +381,7 @@ const Transactions = () => {
           </div>
         )}
 
+        {/*adding edit status dialog*/}
         {editModalOpen && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
             <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
@@ -411,6 +424,7 @@ const Transactions = () => {
           </div>
         )}
 
+        {/* Modal to display payment details */}
         {modalInfo && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
             <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">

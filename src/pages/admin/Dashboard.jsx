@@ -139,7 +139,7 @@ const Dashboard = () => {
       pdf.text(summary, 10, 20);
 
       // Add the chart image to the PDF
-      pdf.addImage(imgData, "PNG", 10, 40, 180, 100); // Adjust the size and position
+      pdf.addImage(imgData, "PNG", 10, 40, 180, 100); 
 
       // Save the PDF
       pdf.save(`${title}.pdf`);
