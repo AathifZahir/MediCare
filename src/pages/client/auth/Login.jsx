@@ -129,6 +129,18 @@ export default function Login() {
             </button>
           </span>
         </div>
+        {/* Sign up link */}
+        <div className="mt-4 text-center">
+          <span className="text-sm text-gray-600">
+            For admin Login?{" "}
+            <button
+              onClick={() => navigate("/admin/login")} // Navigate to the registration page
+              className="text-indigo-600 hover:text-indigo-500"
+            >
+             Login
+            </button>
+          </span>
+        </div>
       </div>
     </div>
   );
