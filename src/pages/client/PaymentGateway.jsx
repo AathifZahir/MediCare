@@ -149,7 +149,6 @@ const PaymentGateway = () => {
           timestamp: new Date(),
         };
 
-        // Add specific fields based on payment type
         if (paymentType === "card") {
           appointmentData.status = "Scheduled";
         } else if (paymentType === "insurance") {

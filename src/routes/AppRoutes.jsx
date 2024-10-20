@@ -13,6 +13,7 @@ import Profile from "../pages/client/Profile";
 import ViewReport from "../pages/client/ViewReport";
 import MyAppointments from "../pages/client/MyAppointments";
 import ServicesPage from "../pages/client/Services";
+import AboutUs from "../pages/client/AboutUs";
 
 //Admin
 import AdminRegister from "../pages/admin/auth/Register";
@@ -37,6 +38,7 @@ const AppRoutes = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Home />} />
+        <Route path="/aboutus" element={<AboutUs />} />
         <Route
           path="/Profile"
           element={

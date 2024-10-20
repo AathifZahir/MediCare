@@ -64,7 +64,7 @@ const Header = () => {
             Appointment
           </a>
           <a
-            href="/about"
+            href="/aboutus"
             className="flex items-center text-gray-700 hover:text-indigo-600"
           >
             <Info className="h-5 w-5 mr-1" />
