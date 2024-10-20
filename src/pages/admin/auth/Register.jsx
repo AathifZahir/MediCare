@@ -13,7 +13,7 @@ export default function SignUp() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
-  const [role, setRole] = useState("patient"); // New state for role selection
+  const [role, setRole] = useState("admin"); // New state for role selection
   const [hospitals, setHospitals] = useState([]); // State to store hospitals
   const [selectedHospital, setSelectedHospital] = useState(""); // State for selected hospital
 

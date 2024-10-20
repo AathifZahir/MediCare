@@ -17,6 +17,7 @@ import {
   Snackbar,
   CircularProgress,
   Button,
+  TextField,
 } from "@mui/material";
 import AdminSidebar from "../../components/AdminSidebar";
 
@@ -182,31 +183,112 @@ const HospitalPage = () => {
         )}
 
         {/* Modal for adding/updating hospitals */}
-        {/* Your existing modal code here */}
+        {openModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
+              <h2 className="text-2xl font-bold text-gray-800">
+                {editingHospital ? "Edit Hospital" : "Add Hospital"}
+              </h2>
+              <form>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Hospital Name
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+                  />
+                </div>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Contact Number
+                  </label>
+                  <input
+                    type="text"
+                    name="contactNumber"
+                    value={formData.contactNumber}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+                  />
+                </div>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+                  />
+                </div>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Type
+                  </label>
+                  <select
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+                  >
+                    <option value="Private">Private</option>
+                    <option value="Government">Government</option>
+                  </select>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    className="bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded mr-2"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddOrUpdateHospital}
+                    className="bg-blue-500 text-white font-semibold py-2 px-4 rounded"
+                  >
+                    {editingHospital ? "Update" : "Add"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Delete confirmation dialog */}
-        <Dialog
-          open={deleteDialogOpen}
-          onClose={handleCloseDeleteDialog}
-          aria-labelledby="alert-dialog-title"
-          aria-describedby="alert-dialog-description"
-        >
-          <DialogTitle id="alert-dialog-title">{"Confirm Delete"}</DialogTitle>
-          <DialogContent>
-            <DialogContentText id="alert-dialog-description">
-              Are you sure you want to delete this hospital? This action cannot
-              be undone.
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDeleteDialog} color="primary">
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmDelete} color="secondary" autoFocus>
-              Confirm
-            </Button>
-          </DialogActions>
-        </Dialog>
+        {deleteDialogOpen && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Confirm Delete
+              </h2>
+              <p className="text-gray-700 mt-4">
+                Are you sure you want to delete this hospital? This action
+                cannot be undone.
+              </p>
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={handleCloseDeleteDialog}
+                  className="bg-gray-300 text-gray- 800 font-semibold py-2 px-4 rounded mr-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  className="bg-red-500 text-white font-semibold py-2 px-4 rounded"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Snackbar for notifications */}
         <Snackbar

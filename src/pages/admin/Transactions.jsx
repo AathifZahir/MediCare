@@ -20,6 +20,8 @@ const Transactions = () => {
   const [loading, setLoading] = useState(true);
   const [confirmStatusDialogOpen, setConfirmStatusDialogOpen] = useState(false);
   const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editTransactionInfo, setEditTransactionInfo] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -107,6 +109,54 @@ const Transactions = () => {
       } finally {
         setConfirmDeleteDialogOpen(false);
         setConfirmationInfo(null);
+      }
+    }
+  };
+
+  const handleEditTransaction = (transaction) => {
+    setEditTransactionInfo(transaction);
+    setEditModalOpen(true);
+  };
+
+  const confirmEditTransaction = async () => {
+    if (editTransactionInfo) {
+      try {
+        // Update the transaction status
+        const transactionDocRef = doc(
+          db,
+          "transactions",
+          editTransactionInfo.id
+        );
+        await updateDoc(transactionDocRef, {
+          status: editTransactionInfo.status,
+        });
+
+        // Update the related appointment status based on the new transaction status
+        const appointmentDocRef = doc(
+          db,
+          "appointments",
+          editTransactionInfo.appointmentId
+        );
+        const newStatus =
+          editTransactionInfo.status === "Paid" ? "Scheduled" : "Pending";
+        await updateDoc(appointmentDocRef, { status: newStatus });
+
+        // Update the local state
+        setTransactions(
+          transactions.map((t) =>
+            t.id === editTransactionInfo.id
+              ? { ...t, status: editTransactionInfo.status }
+              : t
+          )
+        );
+      } catch (error) {
+        console.error(
+          "Error updating transaction or appointment status:",
+          error
+        );
+      } finally {
+        setEditModalOpen(false);
+        setEditTransactionInfo(null);
       }
     }
   };
@@ -313,6 +363,48 @@ const Transactions = () => {
                   className="bg-red-500 hover:bg-red-700 mt-5 text-white font-semibold py-2 px-4 border border-red-700 rounded shadow"
                 >
                   Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {editModalOpen && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Edit Transaction Status
+              </h2>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={editTransactionInfo?.status}
+                  onChange={(e) =>
+                    setEditTransactionInfo({
+                      ...editTransactionInfo,
+                      status: e.target.value,
+                    })
+                  }
+                  className="block w-full border border-gray-300 rounded-md p-2"
+                >
+                  <option value="Under Review">Under Review</option>
+                  <option value="Paid">Paid</option>
+                </select>
+              </div>
+              <div className="flex justify-end space-x-2 mt-5">
+                <button
+                  onClick={() => setEditModalOpen(false)}
+                  className="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmEditTransaction}
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-semibold py-2 px-4 border border-blue-700 rounded shadow"
+                >
+                  Save
                 </button>
               </div>
             </div>
