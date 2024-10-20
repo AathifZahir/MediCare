@@ -32,6 +32,13 @@ export default function UserProfile() {
   const [showLargeProfilePic, setShowLargeProfilePic] = useState(false); // State for large profile picture
   const navigate = useNavigate();
   const user = auth.currentUser;
+  // Function to calculate age from date of birth
+  const calculateAge = (dateOfBirth) => {
+    const dob = new Date(dateOfBirth);
+    const diffMs = Date.now() - dob.getTime();
+    const ageDt = new Date(diffMs);
+    return Math.abs(ageDt.getUTCFullYear() - 1970);
+  };
 
   useEffect(() => {
     // Redirect to profile if user is not authenticated
@@ -178,6 +185,7 @@ export default function UserProfile() {
               <p className="text-gray-900">
                 Date of Birth: {userData.dateOfBirth}
               </p>
+              <p className="text-gray-900">Age: {calculateAge(userData.dateOfBirth)}</p>
               <p className="text-gray-900">Address: {userData.address}</p>
             </div>
           )}

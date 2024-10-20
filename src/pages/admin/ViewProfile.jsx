@@ -10,6 +10,18 @@ const AdminViewProfile = () => {
   const [selectedImage, setSelectedImage] = useState(null); // State for the selected image
   const [isModalOpen, setIsModalOpen] = useState(false); // State to manage modal visibility
 
+  // Helper function to calculate age from date of birth
+  const calculateAge = (dob) => {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   useEffect(() => {
     const fetchPatients = async () => {
       try {
@@ -80,6 +92,7 @@ const AdminViewProfile = () => {
                 <th className="border border-gray-300 p-2">Email</th>
                 <th className="border border-gray-300 p-2">Phone Number</th>
                 <th className="border border-gray-300 p-2">Date of Birth</th>
+                <th className="border border-gray-300 p-2">Age</th> {/* New Age column */}
                 <th className="border border-gray-300 p-2">Address</th>
               </tr>
             </thead>
@@ -105,12 +118,13 @@ const AdminViewProfile = () => {
                     <td className="border border-gray-300 p-2">{user.email}</td>
                     <td className="border border-gray-300 p-2">{user.phoneNumber}</td>
                     <td className="border border-gray-300 p-2">{user.dateOfBirth}</td>
+                    <td className="border border-gray-300 p-2">{calculateAge(user.dateOfBirth)}</td> {/* Display age */}
                     <td className="border border-gray-300 p-2">{user.address}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="8" className="border border-gray-300 p-2 text-center">
+                  <td colSpan="9" className="border border-gray-300 p-2 text-center">
                     No patients found.
                   </td>
                 </tr>
