@@ -1,135 +1,100 @@
-import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import AppointmentModal from "../src/components/AppointmentModal"; // Adjust the path as necessary
-import db from "../src/firebase/firestore"; // Adjust the import path as necessary
-import { collection, addDoc } from "firebase/firestore";
+// test/AppointmentModel.test.js
+import { createAppointmentUrl } from "../src/utils/CreateAppointment";
 
-// Mock the Firebase functions
-jest.mock("../src/firebase/firestore", () => ({
-  collection: jest.fn(),
-  getDocs: jest.fn(),
-  query: jest.fn(),
-  where: jest.fn(),
-}));
+describe("createAppointmentUrl", () => {
+  let mockOnClose;
+  let mockSetError;
 
-const serviceMock = { id: "service1", name: "Consultation" };
-const hospitalMock = { id: "hospital1", name: "City Hospital" };
+  beforeEach(() => {
+    // Mock the onClose and setError functions
+    mockOnClose = jest.fn();
+    mockSetError = jest.fn();
 
-// Mock the Firebase Firestore data
-beforeEach(async () => {
-  db.getDocs.mockResolvedValue({
-    docs: [
-      {
-        id: hospitalMock.id,
-        data: () => ({ name: hospitalMock.name }),
-      },
-    ],
+    // Mock window.location.href
+    delete window.location; // Delete the existing location object
+    window.location = { href: "" }; // Create a new location object
   });
 
-  // Mock the appointment data
-  db.getDocs.mockResolvedValueOnce({
-    docs: [],
+  afterEach(() => {
+    jest.clearAllMocks();
   });
-});
 
-describe("AppointmentModal", () => {
-  test("renders correctly and creates appointment on valid input", async () => {
-    render(
-      <AppointmentModal
-        isOpen={true}
-        onClose={jest.fn()}
-        service={serviceMock}
-      />
+  test("should create appointment and redirect to payment gateway on valid input", () => {
+    const hospitalId = "123";
+    const date = new Date(Date.now() + 86400000).toISOString().slice(0, 10); // Tomorrow's date
+    const time = "10:00";
+    const serviceId = "abc";
+
+    createAppointmentUrl(
+      hospitalId,
+      date,
+      time,
+      serviceId,
+      mockOnClose,
+      mockSetError
     );
 
-    // Select hospital
-    fireEvent.change(screen.getByLabelText(/hospital/i), {
-      target: { value: hospitalMock.id },
-    });
+    // Check that no error was set
+    expect(mockSetError).not.toHaveBeenCalled(); // This should pass if the function logic is correct
 
-    // Select date
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    fireEvent.change(screen.getByLabelText(/date/i), {
-      target: { value: tomorrow.toISOString().split("T")[0] },
-    });
-
-    // Select time
-    fireEvent.change(screen.getByLabelText(/time/i), {
-      target: { value: "09:00" },
-    });
-
-    // Submit the form
-    fireEvent.click(screen.getByText(/create appointment/i));
-
-    // Expect the user to be redirected
-    await waitFor(() => {
-      expect(window.location.href).toContain("/payment-gateway");
-    });
-  });
-
-  test("shows error for selecting a past date", async () => {
-    render(
-      <AppointmentModal
-        isOpen={true}
-        onClose={jest.fn()}
-        service={serviceMock}
-      />
+    // Check that window.location.href was set correctly
+    expect(window.location.href).toBe(
+      `/payment-gateway?hospitalId=${hospitalId}&date=${date}&time=${time}&serviceId=${serviceId}`
     );
 
-    // Select hospital
-    fireEvent.change(screen.getByLabelText(/hospital/i), {
-      target: { value: hospitalMock.id },
-    });
-
-    // Select a past date
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    fireEvent.change(screen.getByLabelText(/date/i), {
-      target: { value: yesterday.toISOString().split("T")[0] },
-    });
-
-    // Select time
-    fireEvent.change(screen.getByLabelText(/time/i), {
-      target: { value: "09:00" },
-    });
-
-    // Submit the form
-    fireEvent.click(screen.getByText(/create appointment/i));
-
-    // Expect to see the error message
-    expect(
-      await screen.findByText(/please select a date that is tomorrow or later/i)
-    ).toBeInTheDocument();
+    // Check that onClose was called to close the modal
+    expect(mockOnClose).toHaveBeenCalled();
   });
 
-  test("does not create appointment if hospital is not selected", async () => {
-    render(
-      <AppointmentModal
-        isOpen={true}
-        onClose={jest.fn()}
-        service={serviceMock}
-      />
+  test("should set error when date is in the past", () => {
+    const hospitalId = "123";
+    const date = new Date(Date.now() - 86400000).toISOString().slice(0, 10); // Yesterday's date
+    const time = "10:00";
+    const serviceId = "abc";
+
+    createAppointmentUrl(
+      hospitalId,
+      date,
+      time,
+      serviceId,
+      mockOnClose,
+      mockSetError
     );
 
-    // Select date
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    fireEvent.change(screen.getByLabelText(/date/i), {
-      target: { value: tomorrow.toISOString().split("T")[0] },
-    });
+    // Check that an error was set for invalid date
+    expect(mockSetError).toHaveBeenCalledWith(
+      "Please select a date that is tomorrow or later."
+    );
 
-    // Select time
-    fireEvent.change(screen.getByLabelText(/time/i), {
-      target: { value: "09:00" },
-    });
+    // Check that no redirection happened
+    expect(window.location.href).toBe("");
 
-    // Submit the form
-    fireEvent.click(screen.getByText(/create appointment/i));
+    // onClose should not be called due to error
+    expect(mockOnClose).not.toHaveBeenCalled();
+  });
 
-    // Expect the error message to be present
-    expect(
-      await screen.findByText(/please select a hospital/i)
-    ).toBeInTheDocument();
+  test("should set error when required parameters are missing", () => {
+    const hospitalId = ""; // Missing hospitalId
+    const date = new Date(Date.now() + 86400000).toISOString().slice(0, 10); // Tomorrow's date
+    const time = ""; // Missing time
+    const serviceId = "abc";
+
+    createAppointmentUrl(
+      hospitalId,
+      date,
+      time,
+      serviceId,
+      mockOnClose,
+      mockSetError
+    );
+
+    // Check that an error was set for missing parameters
+    expect(mockSetError).toHaveBeenCalledWith("All fields must be filled.");
+
+    // Check that no redirection happened
+    expect(window.location.href).toBe("");
+
+    // onClose should not be called due to error
+    expect(mockOnClose).not.toHaveBeenCalled();
   });
 });
