@@ -1,44 +1,44 @@
 import React, { useState, useEffect } from "react";
-import db from "../firebase/firestore";
-import { collection, getDocs, addDoc, Timestamp, query, where } from "firebase/firestore";
-import { services } from "../data/ServicesData";
+import db from "../firebase/firestore"; // Import Firestore configuration
+import { collection, getDocs, addDoc, Timestamp, query, where } from "firebase/firestore"; // Firestore methods
+import { services } from "../data/ServicesData"; // Import services data
 
 const AdminAppointmentModal = ({ isOpen, onClose }) => {
-  const [hospitals, setHospitals] = useState([]);
-  const [selectedHospital, setSelectedHospital] = useState("");
-  const [userName, setUserName] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [paymentType, setPaymentType] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [policyNumber, setPolicyNumber] = useState("");
-  const [providerName, setProviderName] = useState("");
-  const [selectedService, setSelectedService] = useState(null); // Store selected service
-  const [bookedSlots, setBookedSlots] = useState([]);
-  const [error, setError] = useState("");
+  const [hospitals, setHospitals] = useState([]); // State to store list of hospitals
+  const [selectedHospital, setSelectedHospital] = useState(""); // State to store selected hospital ID
+  const [userName, setUserName] = useState(""); // State to store user name
+  const [date, setDate] = useState(""); // State to store selected appointment date
+  const [time, setTime] = useState(""); // State to store selected appointment time
+  const [paymentType, setPaymentType] = useState(""); // State to store selected payment type
+  const [cardNumber, setCardNumber] = useState(""); // State to store card number (for card payments)
+  const [policyNumber, setPolicyNumber] = useState(""); // State to store insurance policy number
+  const [providerName, setProviderName] = useState(""); // State to store insurance provider name
+  const [selectedService, setSelectedService] = useState(null); // State to store selected service details
+  const [bookedSlots, setBookedSlots] = useState([]); // State to store already booked time slots
+  const [error, setError] = useState(""); // State to store error messages
 
-  // Fetch available hospitals from Firestore
+  // Fetch available hospitals from Firestore when the component loads
   useEffect(() => {
     const fetchHospitals = async () => {
       try {
-        const hospitalsCollection = collection(db, "hospitals");
-        const hospitalSnapshot = await getDocs(hospitalsCollection);
+        const hospitalsCollection = collection(db, "hospitals"); // Reference to hospitals collection
+        const hospitalSnapshot = await getDocs(hospitalsCollection); // Fetch hospital documents
         const hospitalData = hospitalSnapshot.docs.map((doc) => ({
           id: doc.id,
           name: doc.data().name,
         }));
-        setHospitals(hospitalData);
+        setHospitals(hospitalData); // Store fetched hospitals in state
       } catch (error) {
         console.error("Error retrieving hospitals:", error);
       }
     };
-    fetchHospitals();
+    fetchHospitals(); // Call fetch function
   }, []);
 
-  // Fetch booked slots when hospital and date are selected
+  // Fetch booked slots for a selected hospital and date
   useEffect(() => {
     const fetchBookedSlots = async () => {
-      if (!selectedHospital || !date) return;
+      if (!selectedHospital || !date) return; // Only fetch if hospital and date are selected
 
       try {
         const q = query(
@@ -46,69 +46,71 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
           where("hospitalId", "==", selectedHospital),
           where("date", "==", date)
         );
-        const querySnapshot = await getDocs(q);
-        const booked = querySnapshot.docs.map((doc) => doc.data().time);
-        setBookedSlots(booked);
+        const querySnapshot = await getDocs(q); // Fetch booked appointments
+        const booked = querySnapshot.docs.map((doc) => doc.data().time); // Extract booked times
+        setBookedSlots(booked); // Store booked times in state
       } catch (error) {
         console.error("Error fetching booked slots:", error);
       }
     };
 
-    fetchBookedSlots();
+    fetchBookedSlots(); // Call fetch function when hospital or date changes
   }, [selectedHospital, date]);
 
-  if (!isOpen) return null; // Don't render modal if it's not open
+  if (!isOpen) return null; // Don't render modal if it is not open
 
   // Generate time slots from 09:00 to 16:30
   const generateTimeSlots = () => {
     const slots = [];
-    for (let hour = 9; hour <= 16.30; hour++) {
-      slots.push(`${hour.toString().padStart(2, "0")}:00`);
-      if (hour < 16.30) {
-        slots.push(`${hour.toString().padStart(2, "0")}:30`);
+    for (let hour = 9; hour <= 16.5; hour++) {
+      slots.push(`${hour.toString().padStart(2, "0")}:00`); // Add full-hour slots
+      if (hour < 16.5) {
+        slots.push(`${hour.toString().padStart(2, "0")}:30`); // Add half-hour slots
       }
     }
     return slots;
   };
 
-  const timeSlots = generateTimeSlots();
+  const timeSlots = generateTimeSlots(); // Call to generate time slots
 
-  // Disable past dates in date picker
-  const todayString = new Date().toISOString().split("T")[0];
+  // Disable past dates in the date picker
+  const todayString = new Date().toISOString().split("T")[0]; // Get current date for date picker min value
 
+  // Handle form submission to create appointment and transaction in Firestore
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validate required fields
     if (!userName || !date || !time || !selectedHospital || !paymentType || !selectedService) {
       setError("Please fill all required fields.");
       return;
     }
 
-    const appointmentStatus = paymentType === "insurance" ? "Under Review" : "Scheduled";
-    const serviceFee = selectedService.fee.replace("LKR ", "").replace(",", "");
+    const appointmentStatus = paymentType === "insurance" ? "Under Review" : "Scheduled"; // Set status based on payment type
+    const serviceFee = selectedService.fee.replace("LKR ", "").replace(",", ""); // Get service fee as a number
 
-    // Create appointment entry in Firestore
+    // Create appointment data
     const appointmentData = {
       userName,
       date,
       time,
       hospitalId: selectedHospital,
-      serviceId: selectedService.id.toString(), // Set serviceId
-      amount: parseFloat(serviceFee), // Set amount
+      serviceId: selectedService.id.toString(), // Store service ID
+      amount: parseFloat(serviceFee), // Convert fee to float
       paymentType,
       status: appointmentStatus,
-      timestamp: Timestamp.now(), // Save timestamp of appointment creation
+      timestamp: Timestamp.now(), // Set creation timestamp
     };
 
     try {
       console.log("Appointment Data:", appointmentData);
 
-      // Add appointment to appointments collection
+      // Add appointment to Firestore
       const appointmentRef = await addDoc(collection(db, "appointments"), appointmentData);
-      const appointmentId = appointmentRef.id;
+      const appointmentId = appointmentRef.id; // Get created appointment ID
       console.log("Appointment added with ID:", appointmentId);
 
-      // Set transaction status based on paymentType
+      // Set transaction status based on payment type
       let transactionStatus = "Pending";
       if (paymentType === "card" || paymentType === "cash") {
         transactionStatus = "Paid";
@@ -116,27 +118,28 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
         transactionStatus = "Under Review";
       }
 
-      // Create transaction entry
+      // Create transaction data
       const transactionData = {
         amount: parseFloat(serviceFee),
         appointmentId,
         hospitalId: selectedHospital,
         userName,
         paymentType,
-        status: transactionStatus, // Set the correct status based on paymentType
-        timestamp: Timestamp.now(), // Save timestamp of transaction creation
+        status: transactionStatus,
+        timestamp: Timestamp.now(), // Set creation timestamp for the transaction
       };
 
-      // Add additional data for card or insurance
+      // Add additional details based on payment type
       if (paymentType === "card") {
-        transactionData.cardNumber = cardNumber;
+        transactionData.cardNumber = cardNumber; // Store card number if payment type is card
       } else if (paymentType === "insurance") {
-        transactionData.policyNumber = policyNumber;
-        transactionData.providerName = providerName;
+        transactionData.policyNumber = policyNumber; // Store insurance policy number
+        transactionData.providerName = providerName; // Store insurance provider name
       }
 
       console.log("Transaction Data:", transactionData);
 
+      // Add transaction to Firestore
       await addDoc(collection(db, "transactions"), transactionData);
       console.log("Transaction added.");
 
@@ -151,7 +154,7 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
       setPolicyNumber("");
       setProviderName("");
       setError("");
-      onClose();
+      onClose(); // Close modal
     } catch (error) {
       console.error("Error creating appointment or transaction:", error);
       setError("Failed to create appointment.");
@@ -173,25 +176,29 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
           Create Appointment
         </h2>
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+
+        {/* Form to create an appointment */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* User Name input */}
           <div className="flex flex-col space-y-2">
             <label className="text-sm font-medium text-gray-700">User Name:</label>
             <input
               type="text"
               value={userName}
-              onChange={(e) => setUserName(e.target.value)}
+              onChange={(e) => setUserName(e.target.value)} // Update user name state
               required
               className="py-2 px-4 border border-gray-300 rounded-md shadow-sm"
             />
           </div>
 
+          {/* Service selection */}
           <div className="flex flex-col space-y-2">
             <label className="text-sm font-medium text-gray-700">Service:</label>
             <select
               value={selectedService ? selectedService.id : ""}
               onChange={(e) => {
-                const service = services.find((s) => s.id === parseInt(e.target.value));
-                setSelectedService(service);
+                const service = services.find((s) => s.id === parseInt(e.target.value)); // Find selected service
+                setSelectedService(service); // Set selected service
               }}
               required
               className="py-2 px-4 border border-gray-300 rounded-md shadow-sm"
@@ -205,23 +212,25 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
             </select>
           </div>
 
+          {/* Display service fee */}
           {selectedService && (
             <div className="flex flex-col space-y-2">
               <label className="text-sm font-medium text-gray-700">Service Fee:</label>
               <input
                 type="text"
-                value={selectedService.fee}
+                value={selectedService.fee} // Display fee from the selected service
                 readOnly
                 className="py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-gray-100"
               />
             </div>
           )}
 
+          {/* Hospital selection */}
           <div className="flex flex-col space-y-2">
             <label className="text-sm font-medium text-gray-700">Hospital:</label>
             <select
               value={selectedHospital}
-              onChange={(e) => setSelectedHospital(e.target.value)}
+              onChange={(e) => setSelectedHospital(e.target.value)} // Set selected hospital
               required
               className="py-2 px-4 border border-gray-300 rounded-md shadow-sm"
             >
@@ -234,23 +243,25 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
             </select>
           </div>
 
+          {/* Date selection */}
           <div className="flex flex-col space-y-2">
             <label className="text-sm font-medium text-gray-700">Date:</label>
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              min={todayString}
+              onChange={(e) => setDate(e.target.value)} // Set selected date
+              min={todayString} // Disable past dates
               required
               className="py-2 px-4 border border-gray-300 rounded-md shadow-sm"
             />
           </div>
 
+          {/* Time slot selection */}
           <div className="flex flex-col space-y-2">
             <label className="text-sm font-medium text-gray-700">Time:</label>
             <select
               value={time}
-              onChange={(e) => setTime(e.target.value)}
+              onChange={(e) => setTime(e.target.value)} // Set selected time slot
               required
               className="py-2 px-4 border border-gray-300 rounded-md shadow-sm"
             >
@@ -259,7 +270,7 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
                 <option
                   key={slot}
                   value={slot}
-                  disabled={bookedSlots.includes(slot)}
+                  disabled={bookedSlots.includes(slot)} // Disable already booked slots
                 >
                   {slot} {bookedSlots.includes(slot) ? "(Booked)" : ""}
                 </option>
@@ -267,11 +278,12 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
             </select>
           </div>
 
+          {/* Payment type selection */}
           <div className="flex flex-col space-y-2">
             <label className="text-sm font-medium text-gray-700">Payment Type:</label>
             <select
               value={paymentType}
-              onChange={(e) => setPaymentType(e.target.value)}
+              onChange={(e) => setPaymentType(e.target.value)} // Set selected payment type
               required
               className="py-2 px-4 border border-gray-300 rounded-md shadow-sm"
             >
@@ -282,19 +294,21 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
             </select>
           </div>
 
+          {/* Card number input (if payment type is card) */}
           {paymentType === "card" && (
             <div className="flex flex-col space-y-2">
               <label className="text-sm font-medium text-gray-700">Card Number:</label>
               <input
                 type="text"
                 value={cardNumber}
-                onChange={(e) => setCardNumber(e.target.value)}
+                onChange={(e) => setCardNumber(e.target.value)} // Set card number
                 required
                 className="py-2 px-4 border border-gray-300 rounded-md shadow-sm"
               />
             </div>
           )}
 
+          {/* Insurance details (if payment type is insurance) */}
           {paymentType === "insurance" && (
             <>
               <div className="flex flex-col space-y-2">
@@ -302,7 +316,7 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
                 <input
                   type="text"
                   value={policyNumber}
-                  onChange={(e) => setPolicyNumber(e.target.value)}
+                  onChange={(e) => setPolicyNumber(e.target.value)} // Set policy number
                   required
                   className="py-2 px-4 border border-gray-300 rounded-md shadow-sm"
                 />
@@ -313,7 +327,7 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
                 <input
                   type="text"
                   value={providerName}
-                  onChange={(e) => setProviderName(e.target.value)}
+                  onChange={(e) => setProviderName(e.target.value)} // Set insurance provider name
                   required
                   className="py-2 px-4 border border-gray-300 rounded-md shadow-sm"
                 />
@@ -321,6 +335,7 @@ const AdminAppointmentModal = ({ isOpen, onClose }) => {
             </>
           )}
 
+          {/* Submit button */}
           <div className="flex justify-center space-x-4">
             <button
               type="submit"
