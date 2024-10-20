@@ -1,78 +1,135 @@
 import React from "react";
-import { render, fireEvent, screen, waitFor } from "@testing-library/react";
-import AppointmentModal from "../src/components/AppointmentModal";
-import { collection, getDocs } from "firebase/firestore";
-import { act } from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import AppointmentModal from "../src/components/AppointmentModal"; // Adjust the path as necessary
+import db from "../src/firebase/firestore"; // Adjust the import path as necessary
+import { collection, addDoc } from "firebase/firestore";
 
-// Mock Firebase Firestore
-jest.mock("firebase/firestore", () => {
-  const mockFirestore = {
-    collection: jest.fn(),
-  };
+// Mock the Firebase functions
+jest.mock("../src/firebase/firestore", () => ({
+  collection: jest.fn(),
+  getDocs: jest.fn(),
+  query: jest.fn(),
+  where: jest.fn(),
+}));
 
-  return {
-    getFirestore: jest.fn(() => mockFirestore), // Mock getFirestore to return mockFirestore instance
-    collection: jest.fn(),
-    getDocs: jest.fn(),
-  };
+const serviceMock = { id: "service1", name: "Consultation" };
+const hospitalMock = { id: "hospital1", name: "City Hospital" };
+
+// Mock the Firebase Firestore data
+beforeEach(async () => {
+  db.getDocs.mockResolvedValue({
+    docs: [
+      {
+        id: hospitalMock.id,
+        data: () => ({ name: hospitalMock.name }),
+      },
+    ],
+  });
+
+  // Mock the appointment data
+  db.getDocs.mockResolvedValueOnce({
+    docs: [],
+  });
 });
 
 describe("AppointmentModal", () => {
-  const hospitalsMock = [
-    { id: "hospital1", name: "General Hospital" },
-    { id: "hospital2", name: "City Clinic" },
-  ];
+  test("renders correctly and creates appointment on valid input", async () => {
+    render(
+      <AppointmentModal
+        isOpen={true}
+        onClose={jest.fn()}
+        service={serviceMock}
+      />
+    );
 
-  beforeEach(() => {
-    getDocs.mockResolvedValue({
-      docs: hospitalsMock.map((hospital) => ({
-        id: hospital.id,
-        data: () => hospital,
-      })),
+    // Select hospital
+    fireEvent.change(screen.getByLabelText(/hospital/i), {
+      target: { value: hospitalMock.id },
+    });
+
+    // Select date
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    fireEvent.change(screen.getByLabelText(/date/i), {
+      target: { value: tomorrow.toISOString().split("T")[0] },
+    });
+
+    // Select time
+    fireEvent.change(screen.getByLabelText(/time/i), {
+      target: { value: "09:00" },
+    });
+
+    // Submit the form
+    fireEvent.click(screen.getByText(/create appointment/i));
+
+    // Expect the user to be redirected
+    await waitFor(() => {
+      expect(window.location.href).toContain("/payment-gateway");
     });
   });
 
-  it("should render hospitals dropdown", async () => {
-    await act(async () => {
-      render(
-        <AppointmentModal
-          isOpen={true}
-          onClose={jest.fn()}
-          service={{ id: 1, name: "Consultation" }}
-        />
-      );
+  test("shows error for selecting a past date", async () => {
+    render(
+      <AppointmentModal
+        isOpen={true}
+        onClose={jest.fn()}
+        service={serviceMock}
+      />
+    );
+
+    // Select hospital
+    fireEvent.change(screen.getByLabelText(/hospital/i), {
+      target: { value: hospitalMock.id },
     });
 
-    // Wait for hospitals to be fetched
-    const hospitalOptions = await screen.findAllByRole("option");
-    expect(hospitalOptions.length).toBe(hospitalsMock.length + 1); // Includes default 'Select a hospital'
-  });
-
-  it("should show error for past date", async () => {
-    await act(async () => {
-      render(
-        <AppointmentModal
-          isOpen={true}
-          onClose={jest.fn()}
-          service={{ id: 1, name: "Consultation" }}
-        />
-      );
+    // Select a past date
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    fireEvent.change(screen.getByLabelText(/date/i), {
+      target: { value: yesterday.toISOString().split("T")[0] },
     });
 
-    const dateInput = screen.getByLabelText(/date/i);
-    fireEvent.change(dateInput, { target: { value: "2023-01-01" } });
+    // Select time
+    fireEvent.change(screen.getByLabelText(/time/i), {
+      target: { value: "09:00" },
+    });
 
-    const submitButton = screen.getByRole("button", {
-      name: /create appointment/i,
-    }); // Use getByRole to target the button
-    fireEvent.click(submitButton);
+    // Submit the form
+    fireEvent.click(screen.getByText(/create appointment/i));
 
+    // Expect to see the error message
     expect(
-      screen.getByText(/please select a date that is tomorrow or later/i)
+      await screen.findByText(/please select a date that is tomorrow or later/i)
     ).toBeInTheDocument();
   });
 
-  it("should disable booked time slots", async () => {
-    // Add mock booked appointments logic and check if time slots are disabled
+  test("does not create appointment if hospital is not selected", async () => {
+    render(
+      <AppointmentModal
+        isOpen={true}
+        onClose={jest.fn()}
+        service={serviceMock}
+      />
+    );
+
+    // Select date
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    fireEvent.change(screen.getByLabelText(/date/i), {
+      target: { value: tomorrow.toISOString().split("T")[0] },
+    });
+
+    // Select time
+    fireEvent.change(screen.getByLabelText(/time/i), {
+      target: { value: "09:00" },
+    });
+
+    // Submit the form
+    fireEvent.click(screen.getByText(/create appointment/i));
+
+    // Expect the error message to be present
+    expect(
+      await screen.findByText(/please select a hospital/i)
+    ).toBeInTheDocument();
   });
 });

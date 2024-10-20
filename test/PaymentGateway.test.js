@@ -1,41 +1,91 @@
-import { render, fireEvent, screen } from "@testing-library/react";
-import PaymentGateway from "../src/pages/client/PaymentGateway"; // Adjust path
-import { doc, getDoc } from "firebase/firestore";
+// PaymentGateway.test.js
 
-jest.mock("firebase/firestore", () => ({
-  doc: jest.fn(),
-  getDoc: jest.fn(),
+import React from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom"; // For routing
+import PaymentGateway from "../src/pages/client/PaymentGateway"; // Adjust the import path as needed
+import auth from "../src/firebase/auth"; // Import your auth instance
+import db from "../src/firebase/firestore"; // Import your Firestore config
+import { addDoc } from "firebase/firestore"; // Import addDoc
+
+// Mocking Firestore addDoc function
+jest.mock("../src/firebase/firestore", () => ({
+  ...jest.requireActual("../../firebase/firestore"),
+  addDoc: jest.fn(),
 }));
 
-describe("PaymentGateway", () => {
+// Mock the auth instance
+jest.mock("../src/firebase/auth", () => ({
+  currentUser: { uid: "testUserId" },
+}));
+
+describe("PaymentGateway Component", () => {
   beforeEach(() => {
-    // Mock user data
-    getDoc.mockResolvedValue({
-      exists: () => true,
-      data: () => ({ firstName: "John", lastName: "Doe" }),
+    render(
+      <MemoryRouter>
+        <PaymentGateway />
+      </MemoryRouter>
+    );
+  });
+
+  it("should successfully process a card payment", async () => {
+    fireEvent.click(screen.getByText("Card"));
+    fireEvent.change(screen.getByPlaceholderText("1234 5678 9012 3456"), {
+      target: { value: "1234567812345678" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("MM/YY"), {
+      target: { value: "12/25" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("123"), {
+      target: { value: "123" },
+    });
+
+    fireEvent.click(screen.getByText(/Pay Now LKR/i));
+
+    // Mock successful payment
+    addDoc.mockResolvedValueOnce({ id: "testAppointmentId" });
+
+    await waitFor(() => {
+      expect(screen.getByText("Payment successful!")).toBeInTheDocument();
     });
   });
 
-  it("should display user name and default service amount", async () => {
-    render(<PaymentGateway />);
+  it("should show an error message for missing card details", async () => {
+    fireEvent.click(screen.getByText("Card")); // Select card payment
+    fireEvent.click(screen.getByText(/Pay Now LKR/i)); // Attempt to submit
 
-    // Check for the user's name
-    const userName = await screen.findByText(/John Doe/i);
-    expect(userName).toBeInTheDocument();
-
-    // Check service fee
-    const amountInput = screen.getByDisplayValue("1500"); // Assuming service fee is LKR 1500
-    expect(amountInput).toBeInTheDocument();
+    // Expect error message to appear
+    expect(
+      await screen.findByText("Please fill in all card details.")
+    ).toBeInTheDocument();
   });
 
-  it("should show error when card details are missing", () => {
-    render(<PaymentGateway />);
+  it("should handle the submission of insurance payment and show success message", async () => {
+    fireEvent.click(screen.getByText("Insurance"));
+    fireEvent.change(screen.getByPlaceholderText("Policy Number"), {
+      target: { value: "POL123456" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Insurance Provider"), {
+      target: { value: "Health Insurance" },
+    });
 
-    // Trigger form submission with empty card details
-    fireEvent.click(screen.getByText(/submit/i));
+    fireEvent.click(screen.getByText(/Pay Now LKR/i));
 
+    // Mock successful payment
+    addDoc.mockResolvedValueOnce({ id: "testAppointmentId" });
+
+    await waitFor(() => {
+      expect(screen.getByText("Payment successful!")).toBeInTheDocument();
+    });
+  });
+
+  it("should show an error message for missing insurance details", async () => {
+    fireEvent.click(screen.getByText("Insurance")); // Select insurance payment
+    fireEvent.click(screen.getByText(/Pay Now LKR/i)); // Attempt to submit
+
+    // Expect error message to appear
     expect(
-      screen.getByText(/please fill in all card details/i)
+      await screen.findByText("Please fill in all insurance details.")
     ).toBeInTheDocument();
   });
 });
