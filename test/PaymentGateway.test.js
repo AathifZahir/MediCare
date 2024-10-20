@@ -1,91 +1,142 @@
-// PaymentGateway.test.js
+import { submitPayment } from "../src/utils/CreateTransaction"; // Adjust the import path
+import {
+  addDoc,
+  setDoc,
+  collection,
+  doc,
+  getFirestore,
+} from "firebase/firestore";
 
-import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom"; // For routing
-import PaymentGateway from "../src/pages/client/PaymentGateway"; // Adjust the import path as needed
-import auth from "../src/firebase/auth"; // Import your auth instance
-import db from "../src/firebase/firestore"; // Import your Firestore config
-import { addDoc } from "firebase/firestore"; // Import addDoc
-
-// Mocking Firestore addDoc function
-jest.mock("../src/firebase/firestore", () => ({
-  ...jest.requireActual("../../firebase/firestore"),
+jest.mock("firebase/firestore", () => ({
+  getFirestore: jest.fn(() => ({})),
+  collection: jest.fn(),
+  doc: jest.fn((_, __, id) => ({ id })),
   addDoc: jest.fn(),
+  setDoc: jest.fn(),
 }));
 
-// Mock the auth instance
-jest.mock("../src/firebase/auth", () => ({
-  currentUser: { uid: "testUserId" },
-}));
+describe("submitPayment", () => {
+  const mockData = {
+    hospitalId: "hospital123",
+    amount: 100,
+    serviceId: "service456",
+    paymentType: "card",
+    date: "2024-10-20",
+    time: "10:00 AM",
+    userId: "user789",
+    userName: "John Doe",
+    cardNumber: "4111111111111111",
+    policyNumber: "policy123",
+    providerName: "InsuranceProvider",
+  };
 
-describe("PaymentGateway Component", () => {
   beforeEach(() => {
-    render(
-      <MemoryRouter>
-        <PaymentGateway />
-      </MemoryRouter>
+    jest.clearAllMocks();
+  });
+
+  test("should successfully submit payment and create appointment and transaction", async () => {
+    const mockAppointmentRef = { id: "appointment123" };
+    const mockTransactionRef = { id: "transaction123" };
+
+    addDoc.mockResolvedValueOnce(mockAppointmentRef);
+    addDoc.mockResolvedValueOnce(mockTransactionRef);
+
+    const result = await submitPayment(mockData);
+
+    expect(addDoc).toHaveBeenCalledTimes(2);
+    expect(addDoc).toHaveBeenCalledWith(
+      collection(getFirestore(), "appointments"),
+      expect.objectContaining({
+        hospitalId: "hospital123",
+        amount: 100,
+        serviceId: "service456",
+        paymentType: "card",
+        date: "2024-10-20",
+        time: "10:00 AM",
+        userId: "user789",
+        userName: "John Doe",
+        status: "Scheduled",
+        timestamp: expect.any(Date),
+      })
     );
+    expect(addDoc).toHaveBeenCalledWith(
+      collection(getFirestore(), "transactions"),
+      expect.objectContaining({
+        appointmentId: "appointment123",
+        amount: 100,
+        paymentType: "card",
+        userId: "user789",
+        userName: "John Doe",
+        cardNumber: "4111111111111111", // Expect cardNumber to be included
+        status: "Paid",
+        timestamp: expect.any(Date),
+      })
+    );
+    expect(setDoc).toHaveBeenCalledWith(
+      doc(getFirestore(), "appointments", mockAppointmentRef.id),
+      { transactionId: "transaction123" },
+      { merge: true }
+    );
+    expect(result).toEqual({ success: true, message: "Payment successful!" });
   });
 
-  it("should successfully process a card payment", async () => {
-    fireEvent.click(screen.getByText("Card"));
-    fireEvent.change(screen.getByPlaceholderText("1234 5678 9012 3456"), {
-      target: { value: "1234567812345678" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("MM/YY"), {
-      target: { value: "12/25" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("123"), {
-      target: { value: "123" },
-    });
+  test("should handle insurance payment and create appointment and transaction", async () => {
+    const mockDataInsurance = { ...mockData, paymentType: "insurance" };
+    const mockAppointmentRef = { id: "appointment456" };
+    const mockTransactionRef = { id: "transaction456" };
 
-    fireEvent.click(screen.getByText(/Pay Now LKR/i));
+    addDoc.mockResolvedValueOnce(mockAppointmentRef);
+    addDoc.mockResolvedValueOnce(mockTransactionRef);
 
-    // Mock successful payment
-    addDoc.mockResolvedValueOnce({ id: "testAppointmentId" });
+    const result = await submitPayment(mockDataInsurance);
 
-    await waitFor(() => {
-      expect(screen.getByText("Payment successful!")).toBeInTheDocument();
-    });
+    expect(addDoc).toHaveBeenCalledTimes(2);
+    expect(addDoc).toHaveBeenCalledWith(
+      collection(getFirestore(), "appointments"),
+      expect.objectContaining({
+        hospitalId: "hospital123",
+        amount: 100,
+        serviceId: "service456",
+        paymentType: "insurance",
+        date: "2024-10-20",
+        time: "10:00 AM",
+        userId: "user789",
+        userName: "John Doe",
+        status: "Pending",
+        timestamp: expect.any(Date),
+      })
+    );
+    expect(addDoc).toHaveBeenCalledWith(
+      collection(getFirestore(), "transactions"),
+      expect.objectContaining({
+        appointmentId: "appointment456",
+        amount: 100,
+        paymentType: "insurance",
+        userId: "user789",
+        userName: "John Doe",
+        policyNumber: "policy123", // Expect policyNumber to be included
+        providerName: "InsuranceProvider", // Expect providerName to be included
+        status: "Under Review",
+        timestamp: expect.any(Date),
+      })
+    );
+    expect(setDoc).toHaveBeenCalledWith(
+      doc(getFirestore(), "appointments", mockAppointmentRef.id),
+      { transactionId: "transaction456" },
+      { merge: true }
+    );
+    expect(result).toEqual({ success: true, message: "Payment successful!" });
   });
 
-  it("should show an error message for missing card details", async () => {
-    fireEvent.click(screen.getByText("Card")); // Select card payment
-    fireEvent.click(screen.getByText(/Pay Now LKR/i)); // Attempt to submit
+  test("should return an error message when payment processing fails", async () => {
+    // Simulate payment processing failure
+    jest.spyOn(Math, "random").mockReturnValueOnce(0); // Always return 0 for the random check
 
-    // Expect error message to appear
-    expect(
-      await screen.findByText("Please fill in all card details.")
-    ).toBeInTheDocument();
-  });
+    const result = await submitPayment(mockData);
 
-  it("should handle the submission of insurance payment and show success message", async () => {
-    fireEvent.click(screen.getByText("Insurance"));
-    fireEvent.change(screen.getByPlaceholderText("Policy Number"), {
-      target: { value: "POL123456" },
+    expect(result).toEqual({
+      success: false,
+      message: "Payment processing failed. Please try again.",
     });
-    fireEvent.change(screen.getByPlaceholderText("Insurance Provider"), {
-      target: { value: "Health Insurance" },
-    });
-
-    fireEvent.click(screen.getByText(/Pay Now LKR/i));
-
-    // Mock successful payment
-    addDoc.mockResolvedValueOnce({ id: "testAppointmentId" });
-
-    await waitFor(() => {
-      expect(screen.getByText("Payment successful!")).toBeInTheDocument();
-    });
-  });
-
-  it("should show an error message for missing insurance details", async () => {
-    fireEvent.click(screen.getByText("Insurance")); // Select insurance payment
-    fireEvent.click(screen.getByText(/Pay Now LKR/i)); // Attempt to submit
-
-    // Expect error message to appear
-    expect(
-      await screen.findByText("Please fill in all insurance details.")
-    ).toBeInTheDocument();
   });
 });
