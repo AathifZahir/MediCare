@@ -17,10 +17,10 @@ MediCare is a comprehensive healthcare management system designed to streamline 
 
 ## 🛠️ Technologies Used
 
-- **Frontend**: React.js
-- **Backend**: Firebase (Authentication, Firestore, Storage)
-- **Styling**: Tailwind CSS
-- **Testing**: Jest, React Testing Library
+- **Frontend**: React.js for building user interfaces ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+- **Backend**: Firebase for authentication, database (Firestore), and file storage ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=for-the-badge&logo=Firebase&logoColor=white)
+- **Styling**: Tailwind CSS for rapid UI development ![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
+- **Testing**: Jest and React Testing Library for robust unit and integration testing ![Jest](https://img.shields.io/badge/-jest-%23C21325?style=for-the-badge&logo=jest&logoColor=white) ![Testing-Library](https://img.shields.io/badge/-TestingLibrary-%23E33332?style=for-the-badge&logo=testing-library&logoColor=white)
 
 ## 🏁 Getting Started
 
@@ -32,42 +32,21 @@ MediCare is a comprehensive healthcare management system designed to streamline 
 
 ### Installation
 
-1. Clone the repository:
-git clone https://github.com/your-username/medicare-management-system.git
+1. Clone the repository: `git clone https://github.com/your-username/medicare-management-system.git`
 
+2. Navigate to the project directory: `cd medicare-management-system`
 
-Verify
-
-Open In Editor
-Edit
-Copy code
-
-2. Navigate to the project directory:
-cd medicare-management-system
-
-
-Verify
-
-Open In Editor
-Edit
-Copy code
-
-3. Install dependencies:
-
-`npm install`
-
+3. Install dependencies: `npm install`
 
 4. Set up your Firebase configuration in `src/firebase/firebase.jsx`
 
-5. Start the development server:
-`npm run dev`
+5. Start the development server: `npm run dev`
 
 6. Open your browser and visit `http://localhost:3000`
 
 ## 🧪 Running Tests
 
-To run the test suite:
-`npm test`
+To run the test suite: `npm test`
 
 ## 📄 License
 
